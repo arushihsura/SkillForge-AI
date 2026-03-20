@@ -58,7 +58,7 @@ Powered by **Google Gemini 1.5 Flash**, SkillForge provides two humanized AI lay
 ### 3. Humanized YouSkill Coach
 Our Gemini-powered coach doesn't just give roadmaps—it listens. With **tone and sentiment awareness**, YouSkill detects when a user is overwhelmed and shifts to a supportive, mentoring style.
 
-![YouSkill Coach UI](//C:/Users/sg78b/.gemini/antigravity/brain/60404314-0336-446e-b2ba-3aeca668c5fc/ai_chatbot_open_1774028661521.png)
+![YouSkill Coach UI](./docs/images/youskill_coach.png)
 
 ---
 

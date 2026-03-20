@@ -50,17 +50,17 @@ graph TD
 ### Flexible Job Description Input
 Toggle between file uploads and raw text for rapid iteration.
 
-![JD Input - Text Mode](/C:/Users/sg78b/.gemini/antigravity/brain/60404314-0336-446e-b2ba-3aeca668c5fc/jd_input_toggle_text_1774028589613.png)
+![JD Input - Text Mode](./docs/images/jd_text.png)
 
 ### YouSkill Motivation Hub
 A friendly entry point for career coaching and well-being.
 
-![Dashboard Motivation Card](/C:/Users/sg78b/.gemini/antigravity/brain/60404314-0336-446e-b2ba-3aeca668c5fc/dashboard_motivation_card_1774028642359.png)
+![Dashboard Motivation Card](./docs/images/motivation_card.png)
 
 ### YouSkill Career Coach
 Empathetic, tone-aware mentorship.
 
-![YouSkill Career Coach UI](/C:/Users/sg78b/.gemini/antigravity/brain/60404314-0336-446e-b2ba-3aeca668c5fc/ai_chatbot_open_1774028661521.png)
+![YouSkill Career Coach UI](./docs/images/youskill_coach.png)
 
 ---
 
