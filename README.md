@@ -45,6 +45,25 @@ graph TD
 
 ---
 
+## 📸 Visual Walkthrough
+
+### Flexible Job Description Input
+Toggle between file uploads and raw text for rapid iteration.
+
+![JD Input - Text Mode](file:///C:/Users/sg78b/.gemini/antigravity/brain/60404314-0336-446e-b2ba-3aeca668c5fc/jd_input_toggle_text_1774028589613.png)
+
+### ByteWorks Motivation Hub
+A friendly entry point for career coaching and well-being.
+
+![Dashboard Motivation Card](file:///C:/Users/sg78b/.gemini/antigravity/brain/60404314-0336-446e-b2ba-3aeca668c5fc/dashboard_motivation_card_1774028642359.png)
+
+### AI Career Coach
+Empathetic, tone-aware mentorship.
+
+![AI Career Coach UI](file:///C:/Users/sg78b/.gemini/antigravity/brain/60404314-0336-446e-b2ba-3aeca668c5fc/ai_chatbot_open_1774028661521.png)
+
+---
+
 ## 🏗 System Architecture
 
 SkillForge uses a **Hybrid Warm-Process Architecture** to ensure zero-latency inference.
@@ -85,15 +104,13 @@ SkillForge-AI/
 ├── backend/            # Express.js API & MongoDB Integration
 ├── frontend/           # React Dashboard & Interactive Path UI
 └── ml/
-    ├── skill_gap_model.py # Core 12-stage inference engine
+    ├── skill_gap_model.py # Core 13-stage inference engine
     └── daemon.py          # Persistent async daemon server
 ```
 
 ---
 
 ## 💻 Local Working Demo (Rapid Setup)
-
-I've simplified the local setup into a single-command process.
 
 ### 1) Prerequisites
 - Node.js 18+
@@ -124,10 +141,10 @@ The app will be live at:
 Developed for the **IISc Hackathon**, SkillForge AI aims to democratize career intelligence through empathetic AI.
 
 **Team Members:**
-- **Arushi Tiwari**
-- **Aarya Patankar**
-- **Hridaya Vashishtha**
-- **Shivani Bhat**
+- **[Arushi Tiwari](https://github.com/arushiihsura)**
+- **[Aarya Patankar](https://github.com/rareya)**
+- **[Hridaya Vashishtha](https://github.com/HridayaVashishtha)**
+- **[Shivani Bhat](https://github.com/shivanibhat24)**
 
 ---
-*Built with ❤️ by Team ByteWorks. SkillForge AI is a hackathon-winning vision for the future of career growth.*
+*Built with ❤️ by Team ByteWorks. SkillForge v3.1 is a hackathon-winning vision for the future of career growth.*
