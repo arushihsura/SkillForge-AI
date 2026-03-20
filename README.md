@@ -62,6 +62,11 @@ Empathetic, tone-aware mentorship.
 
 ![YouSkill Career Coach UI](./docs/images/youskill_coach.png)
 
+### 🎥 Live Demo Showcase
+Watch YouSkill in action (Animated Pipeline & Analysis):
+
+![SkillForge Live Demo](./docs/images/demo.webp)
+
 ---
 
 ## 🏗 System Architecture
