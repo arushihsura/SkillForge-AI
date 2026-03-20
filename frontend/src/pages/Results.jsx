@@ -21,6 +21,9 @@ function Results() {
   const [data, setData] = useState(null);
   const [error, setError] = useState("");
   const [saveMessage, setSaveMessage] = useState("");
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [questions, setQuestions] = useState([]);
+  const [loadingQuestions, setLoadingQuestions] = useState(false);
 
   useEffect(() => {
     axios
@@ -136,6 +139,22 @@ function Results() {
     URL.revokeObjectURL(url);
   };
 
+  const generateQuestions = async () => {
+    setLoadingQuestions(true);
+    try {
+      const res = await axios.post("/api/analyze/generate-questions", {
+        missingSkills: missingSkills.slice(0, 5),
+        jobDescription: data.jobDescription || jobSkills.join(", "),
+      });
+      setQuestions(res.data.questions || []);
+      setShowQuiz(true);
+    } catch (err) {
+      console.error("Failed to generate questions", err);
+    } finally {
+      setLoadingQuestions(false);
+    }
+  };
+
   return (
     <div className="sf-page px-4 py-8 md:px-6">
       <motion.div 
@@ -146,40 +165,42 @@ function Results() {
       >
         <motion.header variants={itemVariants} className="sf-card p-7 md:p-8">
           <h1 className="sf-title text-3xl font-bold text-white md:text-5xl">AI Onboarding Results</h1>
-          <p className="mt-3 text-base text-slate-300">Insights from our 12-stage probabilistic engine.</p>
+          <p className="mt-3 text-base" style={{ color: 'var(--text-secondary)' }}>Insights from our 12-stage probabilistic engine.</p>
         </motion.header>
 
         <section className="grid gap-6 lg:grid-cols-2">
           <motion.article variants={itemVariants} className="sf-card p-7">
             <h2 className="font-space text-2xl font-semibold text-white">Skill Comparison</h2>
             <div className="mt-4 grid gap-4 md:grid-cols-2">
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-                <p className="mb-3 text-sm font-medium text-slate-300">Resume Skills</p>
+              <div className="rounded-xl border p-4" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-soft)' }}>
+                <p className="mb-3 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Resume Skills</p>
                 <div className="flex flex-wrap gap-2">
                   {resumeSkills.map((skill) => {
                     const isMatch = jobSet.has(normalize(skill));
                     const isPartial = !isMatch && partialSkills.some((item) => hasTokenOverlap(skill, item));
                     return (
-                      <span key={`res-${skill}`} className={`rounded-full px-3 py-1 text-xs font-medium ${
-                        isMatch ? "bg-emerald-400/20 text-emerald-200" : 
-                        isPartial ? "bg-amber-400/20 text-amber-200" : "bg-white/10 text-slate-300"
-                      }`}>{skill}</span>
+                      <span key={`res-${skill}`} className="rounded-full px-3 py-1 text-xs font-medium" style={{
+                        backgroundColor: isMatch ? 'color-mix(in srgb, var(--accent-primary) 30%, transparent)' : 
+                                       isPartial ? 'rgba(251, 191, 36, 0.2)' : 'var(--bg-soft)',
+                        color: isMatch ? 'var(--text-primary)' : isPartial ? '#fcd34d' : 'var(--text-secondary)'
+                      }}>{skill}</span>
                     );
                   })}
                 </div>
               </div>
 
-              <div className="rounded-xl border border-white/10 bg-white/5 p-4">
-                <p className="mb-3 text-sm font-medium text-slate-300">Job Skills</p>
+              <div className="rounded-xl border p-4" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-soft)' }}>
+                <p className="mb-3 text-sm font-medium" style={{ color: 'var(--text-secondary)' }}>Job Skills</p>
                 <div className="flex flex-wrap gap-2">
                   {jobSkills.map((skill) => {
                     const isMatch = resumeSet.has(normalize(skill));
                     const isPartial = !isMatch && partialSkills.includes(skill);
                     return (
-                      <span key={`job-${skill}`} className={`rounded-full px-3 py-1 text-xs font-medium ${
-                        isMatch ? "bg-emerald-400/20 text-emerald-200" :
-                        isPartial ? "bg-amber-400/20 text-amber-200" : "bg-rose-400/20 text-rose-200"
-                      }`}>{skill}</span>
+                      <span key={`job-${skill}`} className="rounded-full px-3 py-1 text-xs font-medium" style={{
+                        backgroundColor: isMatch ? 'color-mix(in srgb, var(--accent-primary) 30%, transparent)' :
+                                       isPartial ? 'rgba(251, 191, 36, 0.2)' : 'rgba(251, 113, 133, 0.2)',
+                        color: isMatch ? 'var(--text-primary)' : isPartial ? '#fcd34d' : '#fb7185'
+                      }}>{skill}</span>
                     );
                   })}
                 </div>
@@ -191,30 +212,30 @@ function Results() {
             <h2 className="font-space text-2xl font-semibold text-white">Gap Visualization</h2>
             <div className="mt-4 grid gap-3 sm:grid-cols-3">
               {[
-                { label: "Coverage", val: `${coverage}%`, color: "text-cyan-300" },
-                { label: "Missing", val: missingSkills.length, color: "text-rose-300" },
-                { label: "Saved", val: redundancySaved, color: "text-amber-300" }
+                { label: "Coverage", val: `${coverage}%`, color: 'var(--accent-primary)' },
+                { label: "Missing", val: missingSkills.length, color: 'var(--accent-secondary)' },
+                { label: "Saved", val: redundancySaved, color: 'var(--text-secondary)' }
               ].map((kpi, i) => (
-                <div key={i} className="rounded-xl border border-white/10 bg-white/5 p-4">
-                  <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400">{kpi.label}</p>
-                  <p className={`mt-1 text-3xl font-bold ${kpi.color}`}>{kpi.val}</p>
+                <div key={i} className="rounded-xl border p-4" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-soft)' }}>
+                  <p className="text-[10px] uppercase tracking-[0.15em]" style={{ color: 'var(--text-secondary)' }}>{kpi.label}</p>
+                  <p className="mt-1 text-3xl font-bold" style={{ color: kpi.color }}>{kpi.val}</p>
                 </div>
               ))}
             </div>
 
             <div className="mt-6 space-y-4">
               {[
-                { label: "Matched", count: matchedSkills.length, color: "bg-emerald-400", p: (matchedSkills.length/jobSkills.length)*100 },
-                { label: "Partial", count: partialSkills.length, color: "bg-amber-400", p: (partialSkills.length/jobSkills.length)*100 },
-                { label: "Missing", count: missingSkills.length, color: "bg-rose-400", p: (missingSkills.length/jobSkills.length)*100 }
+                { label: "Matched", count: matchedSkills.length, color: 'var(--accent-primary)', p: (matchedSkills.length/jobSkills.length)*100 },
+                { label: "Partial", count: partialSkills.length, color: '#fcd34d', p: (partialSkills.length/jobSkills.length)*100 },
+                { label: "Missing", count: missingSkills.length, color: 'var(--accent-secondary)', p: (missingSkills.length/jobSkills.length)*100 }
               ].map((bar, i) => (
                 <div key={i}>
-                  <div className="mb-1 flex items-center justify-between text-xs text-slate-300">
+                  <div className="mb-1 flex items-center justify-between text-xs" style={{ color: 'var(--text-secondary)' }}>
                     <span>{bar.label}</span>
                     <span>{bar.count}</span>
                   </div>
-                  <div className="h-2 rounded-full bg-white/10">
-                    <motion.div initial={{ width: 0 }} animate={{ width: `${bar.p}%` }} transition={{ duration: 1, delay: 0.5 }} className={`h-2 rounded-full ${bar.color}`} />
+                  <div className="h-2 rounded-full" style={{ backgroundColor: 'var(--bg-soft)' }}>
+                    <motion.div initial={{ width: 0 }} animate={{ width: `${bar.p}%` }} transition={{ duration: 1, delay: 0.5 }} className="h-2 rounded-full" style={{ backgroundColor: bar.color }} />
                   </div>
                 </div>
               ))}
@@ -224,48 +245,158 @@ function Results() {
 
         <section className="grid gap-6 lg:grid-cols-2">
           <motion.article variants={itemVariants} className="sf-card p-7">
-            <h2 className="font-space text-2xl font-semibold text-white">Learning Path</h2>
-            <div className="mt-5 space-y-6">
-              {Object.entries(groupedPath).map(([phase, items]) => (
-                <div key={phase} className="relative pl-6">
-                  <div className="absolute left-[9px] top-0 h-full w-px bg-white/10" />
-                  <p className="relative mb-3 inline-flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.15em] text-accent-primary" style={{ color: 'var(--accent-primary)' }}>
-                    <span className="absolute -left-[29px] inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: 'var(--accent-primary)' }} />
-                    {phase}
-                  </p>
-                  <div className="space-y-2">
-                    {items.map((item) => (
-                      <div key={item.skill} className="rounded-xl border border-white/5 bg-white/5 p-3 hover:bg-white/10 transition-colors">
-                        <p className="font-medium text-slate-100">{item.skill}</p>
-                        <div className="mt-2 flex gap-2 text-[10px]">
-                          <span className={`px-2 py-0.5 rounded-full ${item.status === 'skip' ? 'bg-emerald-400/20 text-emerald-200' : 'bg-rose-400/20 text-rose-200'}`}>
-                            {item.status.toUpperCase()}
-                          </span>
-                          <span className="px-2 py-0.5 rounded-full bg-white/10 text-slate-400">PRIORITY: {item.priority}</span>
-                        </div>
+            <h2 className="font-space text-2xl font-semibold text-white">SHAP: Explainability</h2>
+            <p className="mt-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+              Impact of specific skills on your overall readiness score.
+            </p>
+            <div className="mt-5 space-y-4">
+              {data.shapValues && Object.keys(data.shapValues).length > 0 ? (
+                Object.entries(data.shapValues)
+                  .sort(([, a], [, b]) => Math.abs(b) - Math.abs(a))
+                  .slice(0, 8)
+                  .map(([skill, val]) => (
+                    <div key={skill} className="space-y-1">
+                      <div className="flex justify-between text-xs">
+                        <span className="font-medium text-white">{skill}</span>
+                        <span style={{ color: val > 0 ? 'var(--accent-primary)' : '#fb7185' }}>
+                          {val > 0 ? '+' : ''}{val.toFixed(1)}%
+                        </span>
                       </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+                      <div className="h-1.5 rounded-full overflow-hidden" style={{ backgroundColor: 'var(--bg-soft)' }}>
+                        <motion.div
+                          initial={{ width: 0 }}
+                          animate={{ width: `${Math.min(100, Math.abs(val) * 5)}%` }}
+                          className="h-full"
+                          style={{
+                            backgroundColor: val > 0 ? 'var(--accent-primary)' : '#fb7185',
+                            marginLeft: val < 0 ? 'auto' : '0'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  ))
+              ) : (
+                <p className="text-sm italic" style={{ color: 'var(--text-secondary)' }}>No SHAP data available for this analysis.</p>
+              )}
             </div>
           </motion.article>
 
+          <motion.article variants={itemVariants} className="sf-card p-7 border-accent-glow">
+            <h2 className="font-space text-2xl font-semibold text-white">Improve Your Profile</h2>
+            <p className="mt-2 text-sm" style={{ color: 'var(--text-secondary)' }}>
+              Let SkillForge AI generate a customized 15-question questionnaire to help you close your skill gaps.
+            </p>
+            
+            {!showQuiz ? (
+              <div className="mt-6">
+                <button 
+                  onClick={generateQuestions}
+                  disabled={loadingQuestions}
+                  className="sf-btn-primary w-full py-4 flex items-center justify-center gap-3 text-lg"
+                >
+                  {loadingQuestions ? (
+                    <>
+                      <motion.div 
+                        animate={{ rotate: 360 }} 
+                        transition={{ repeat: Infinity, duration: 1, ease: "linear" }}
+                        className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full"
+                      />
+                      Generating Skill Quiz...
+                    </>
+                  ) : "Generate 15 Critical Questions"}
+                </button>
+              </div>
+            ) : (
+              <div className="mt-6 space-y-6">
+                <div className="max-h-[400px] overflow-y-auto pr-2 space-y-4 sf-scrollbar">
+                  {questions.map((q, idx) => (
+                    <div key={idx} className="p-4 rounded-xl border" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-soft)' }}>
+                      <p className="text-xs font-bold uppercase tracking-wider mb-2" style={{ color: 'var(--accent-primary)' }}>Question {idx + 1}</p>
+                      <p className="text-white font-medium">{q.question}</p>
+                    </div>
+                  ))}
+                </div>
+                <button 
+                  onClick={() => setShowQuiz(false)}
+                  className="text-sm underline" style={{ color: 'var(--text-secondary)' }}
+                >
+                  Back to Overview
+                </button>
+              </div>
+            )}
+          </motion.article>
+        </section>
+
+        <section className="grid gap-6 lg:grid-cols-2">
+          {/* Market Intelligence Section */}
           <motion.article variants={itemVariants} className="sf-card p-7">
-            <h2 className="font-space text-2xl font-semibold text-white">Reasoning Trace</h2>
-            <div className="mt-5 space-y-2">
-              {learningPath.map((item, idx) => (
-                <details key={idx} className="rounded-xl border border-white/5 bg-white/5 p-4 group open:border-accent-primary/50 transition-all">
-                  <summary className="cursor-pointer list-none font-medium text-slate-100 flex items-center justify-between">
-                    {item.skill}
-                    <span className="text-xs text-slate-500 group-open:rotate-180 transition-transform md:block hidden">▼</span>
-                  </summary>
-                  <div className="mt-3 text-sm text-slate-400 space-y-2 border-t border-white/5 pt-3">
-                    <p><span className="text-slate-200 font-medium">Inference:</span> {item.status === 'skip' ? "Sufficient evidentiary skill markers found." : "Critical skill gap detected."}</p>
-                    <p><span className="text-slate-200 font-medium">Prerequisites:</span> {item.phase === 'Foundations' ? "Fundamental" : "Sequence required"}</p>
-                  </div>
-                </details>
-              ))}
+            <h2 className="font-space text-2xl font-semibold text-white">Market Intelligence</h2>
+            <div className="mt-5 grid grid-cols-2 gap-4">
+              <div className="rounded-xl border p-4 bg-white/5" style={{ borderColor: 'var(--border-color)' }}>
+                <p className="text-[10px] uppercase tracking-wider text-slate-400">Competitive Percentile</p>
+                <p className="mt-2 text-3xl font-bold text-emerald-400">{data.applicantBenchmark?.percentile || 0}th</p>
+                <p className="text-[10px] mt-1 text-slate-500">vs 2,000 simulated applicants</p>
+              </div>
+              <div className="rounded-xl border p-4 bg-white/5" style={{ borderColor: 'var(--border-color)' }}>
+                <p className="text-[10px] uppercase tracking-wider text-slate-400">JD Inflation Score</p>
+                <p className="mt-2 text-3xl font-bold text-rose-400">{data.marketPulse?.jdInflationScore || 0}%</p>
+                <p className="text-[10px] mt-1 text-slate-500">Unnecessary skill density</p>
+              </div>
+            </div>
+
+            <div className="mt-6">
+              <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 mb-3">Trending Gap Skills</p>
+              <div className="flex flex-wrap gap-2">
+                {(data.marketPulse?.trendingSkills || []).map(s => (
+                  <span key={s} className="px-3 py-1 bg-emerald-400/10 text-emerald-400 text-xs rounded-full border border-emerald-400/20">
+                    🔥 {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            <div className="mt-6 p-4 rounded-xl border border-accent-primary/20 bg-accent-primary/5">
+              <p className="text-sm italic text-slate-300">"{data.marketPulse?.insight || 'Focus on high-velocity skills to stay ahead.'}"</p>
+            </div>
+          </motion.article>
+
+          {/* ROI & Career Growth Section */}
+          <motion.article variants={itemVariants} className="sf-card p-7">
+            <h2 className="font-space text-2xl font-semibold text-white">Career ROI Analysis</h2>
+            <div className="mt-5 space-y-6">
+              <div>
+                <div className="flex justify-between text-xs mb-2">
+                  <span className="text-slate-400">Hire Probability Improvement</span>
+                  <span className="text-emerald-400 font-bold">+{data.interviewReadiness?.improvementFactor || 1}x</span>
+                </div>
+                <div className="h-3 bg-white/5 rounded-full overflow-hidden flex">
+                   <div 
+                    className="h-full bg-slate-600" 
+                    style={{ width: `${(data.interviewReadiness?.overallHireProbabilityNow || 0) * 100}%` }} 
+                   />
+                   <motion.div 
+                    initial={{ width: 0 }}
+                    animate={{ width: `${((data.interviewReadiness?.overallHireProbabilityAfterPath || 0) - (data.interviewReadiness?.overallHireProbabilityNow || 0)) * 100}%` }}
+                    className="h-full bg-emerald-500"
+                   />
+                </div>
+                <p className="text-[10px] mt-2 text-slate-500 text-right">Probability: Now (Gray) vs After Path (Green)</p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="p-3 rounded-xl border border-white/5">
+                  <p className="text-[10px] text-slate-400">Bottleneck Stage</p>
+                  <p className="text-sm font-bold text-white uppercase mt-1">
+                    {data.interviewReadiness?.bottleneck?.replace(/([A-Z])/g, ' $1') || 'N/A'}
+                  </p>
+                </div>
+                <div className="p-3 rounded-xl border border-white/5">
+                  <p className="text-[10px] text-slate-400">Total Learning Investment</p>
+                  <p className="text-sm font-bold text-white mt-1">
+                    {data.kpis?.estimatedTotalHours || 0} Hours
+                  </p>
+                </div>
+              </div>
             </div>
           </motion.article>
         </section>
@@ -273,14 +404,14 @@ function Results() {
         <motion.section variants={itemVariants} className="sf-card p-7 flex items-center justify-between flex-wrap gap-4">
           <div>
             <h2 className="font-space text-2xl font-semibold text-white">Actions</h2>
-            <p className="text-sm text-slate-400">Export or save your career intelligence report.</p>
+            <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Export or save your career intelligence report.</p>
           </div>
           <div className="flex gap-3">
             <button onClick={downloadReport} className="sf-btn-primary px-6 py-2">Download JSON</button>
             <button onClick={saveAnalysis} className="sf-btn-secondary px-6 py-2">Save to Profile</button>
           </div>
         </motion.section>
-        {saveMessage && <p className="text-center text-sm text-emerald-400 font-medium">{saveMessage}</p>}
+        {saveMessage && <p className="text-center text-sm font-medium" style={{ color: 'var(--accent-primary)' }}>{saveMessage}</p>}
       </motion.div>
     </div>
   );

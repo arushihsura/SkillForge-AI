@@ -1,43 +1,21 @@
-/**
- * SkillForge AI — analyze.js  (v3)
- * ================================
- * Drop into: backend/routes/analyze.js
- *
- * Architecture upgrade from v1:
- *  ┌──────────────┐   SSE stream    ┌─────────────────────┐
- *  │  React UI    │ ←────────────── │  Express /analyze   │
- *  └──────────────┘                 └──────────┬──────────┘
- *                                              │  Unix socket
- *                                   ┌──────────▼──────────┐
- *                                   │  Python daemon.py   │  ← stays warm
- *                                   │  (async, LRU cache) │
- *                                   └─────────────────────┘
- *
- * Key differences:
- *   v1: spawn("python3") per request — 200ms cold start every time
- *   v3: persistent daemon, zero cold start, concurrent requests, LRU cache
- *
- *   v1: res.json(result) after 100% complete
- *   v3: SSE streams stage-by-stage — frontend renders progressively
- *
- *   v1: no health check, no daemon restart
- *   v3: GET /health, auto-restart on crash, 5s startup timeout
- */
+import express from "express";
+const router = express.Router();
+import net from "net";
+import { spawn } from "child_process";
+import path from "path";
+import crypto from "crypto";
+import { fileURLToPath } from "url";
+import Result from "../models/Result.js";
+import { generateInterviewQuestions, chatWithGemini } from "../services/geminiService.js";
 
-const express   = require("express");
-const router    = express.Router();
-const net       = require("net");
-const { spawn } = require("child_process");
-const path      = require("path");
-const crypto    = require("crypto");
-const Result    = require("../models/Result");
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // ── Config ──────────────────────────────────────────────────────────────────
-const SF_MODE        = process.env.SF_MODE        || "unix";
-const SF_SOCKET      = process.env.SF_SOCKET      || "/tmp/skillforge.sock";
-const SF_TCP_HOST    = process.env.SF_TCP_HOST    || "127.0.0.1";
-const SF_TCP_PORT    = parseInt(process.env.SF_TCP_PORT || "8001");
-const DAEMON_SCRIPT  = process.env.ML_DAEMON_PATH ||
+const SF_MODE = process.env.SF_MODE || "unix";
+const SF_SOCKET = process.env.SF_SOCKET || "/tmp/skillforge.sock";
+const SF_TCP_HOST = process.env.SF_TCP_HOST || "127.0.0.1";
+const SF_TCP_PORT = parseInt(process.env.SF_TCP_PORT || "8001");
+const DAEMON_SCRIPT = process.env.ML_DAEMON_PATH ||
   path.resolve(__dirname, "../../ml/skill_gap_model.py");
 const STREAM_TIMEOUT = parseInt(process.env.SF_TIMEOUT_MS || "120000");
 
@@ -45,16 +23,16 @@ const STREAM_TIMEOUT = parseInt(process.env.SF_TIMEOUT_MS || "120000");
 const IS_SERVERLESS = SF_MODE === "serverless" || !!process.env.VERCEL;
 
 // ── Daemon lifecycle ─────────────────────────────────────────────────────────
-let _proc    = null;
-let _ready   = false;
+let _proc = null;
+let _ready = false;
 let _starting = false;
 
 async function ensureDaemon() {
-  if (IS_SERVERLESS) return; // No persistent daemon in serverless mode
+  if (IS_SERVERLESS) return;
   if (_ready) return;
   if (_starting) {
     return new Promise((res) => {
-      const iv = setInterval(() => { if (_ready || !_starting) { clearInterval(iv); res(); }}, 80);
+      const iv = setInterval(() => { if (_ready || !_starting) { clearInterval(iv); res(); } }, 80);
     });
   }
 
@@ -81,7 +59,6 @@ async function ensureDaemon() {
 
   _proc.stderr.on("data", (d) => {
     const t = d.toString().trim();
-    // Surface import errors or tracebacks — hide normal asyncio noise
     if (t && (t.startsWith("Traceback") || t.includes("Error") || t.includes("error"))) {
       console.error("[daemon]", t);
     }
@@ -105,7 +82,7 @@ async function ensureDaemon() {
 }
 
 process.on("SIGTERM", () => _proc?.kill("SIGTERM"));
-process.on("SIGINT",  () => _proc?.kill("SIGTERM"));
+process.on("SIGINT", () => _proc?.kill("SIGTERM"));
 
 // ── Socket transport ─────────────────────────────────────────────────────────
 
@@ -115,11 +92,6 @@ function makeDaemonSocket() {
     : net.createConnection({ path: SF_SOCKET });
 }
 
-/**
- * Send payload to daemon, receive newline-delimited JSON chunks.
- * Calls onStage(msg) for each "stage" event (SSE intermediate).
- * Resolves with the final "complete" data.
- */
 function queryDaemon(payload, onStage) {
   if (IS_SERVERLESS) {
     return new Promise((resolve, reject) => {
@@ -134,16 +106,16 @@ function queryDaemon(payload, onStage) {
           if (!line.trim()) continue;
           let msg;
           try { msg = JSON.parse(line); } catch { continue; }
-          
-          if      (msg.event === "stage"    ) { onStage?.(msg); }
-          else if (msg.event === "complete" ) { if (!done) { done = true; resolve(msg.data); } }
-          else if (msg.event === "error"    ) { if (!done) { done = true; reject(new Error(msg.error)); } }
+
+          if (msg.event === "stage") { onStage?.(msg); }
+          else if (msg.event === "complete") { if (!done) { done = true; resolve(msg.data); } }
+          else if (msg.event === "error") { if (!done) { done = true; reject(new Error(msg.error)); } }
         }
       });
 
       py.stderr.on("data", (d) => console.error("[ml-serverless]", d.toString()));
       py.on("error", (e) => reject(e));
-      
+
       py.stdin.write(JSON.stringify(payload) + "\n");
       py.stdin.end();
     });
@@ -168,9 +140,9 @@ function queryDaemon(payload, onStage) {
         let msg;
         try { msg = JSON.parse(line); } catch { continue; }
 
-        if      (msg.event === "stage"    ) { onStage?.(msg); }
-        else if (msg.event === "complete" ) { clearTimeout(timeout); if (!done) { done = true; resolve(msg.data); } }
-        else if (msg.event === "error"    ) { clearTimeout(timeout); if (!done) { done = true; reject(new Error(msg.error)); } }
+        if (msg.event === "stage") { onStage?.(msg); }
+        else if (msg.event === "complete") { clearTimeout(timeout); if (!done) { done = true; resolve(msg.data); } }
+        else if (msg.event === "error") { clearTimeout(timeout); if (!done) { done = true; reject(new Error(msg.error)); } }
       }
     });
 
@@ -178,15 +150,44 @@ function queryDaemon(payload, onStage) {
   });
 }
 
-// ── POST /api/analyze ────────────────────────────────────────────────────────
+// ── GET /api/analyze/health ──────────────────────────────────────────────────
+router.get("/health", (_req, res) => {
+  res.json({ daemon: _ready ? "ready" : "offline", mode: SF_MODE, pid: _proc?.pid ?? null });
+});
 
+// ── POST /api/analyze/generate-questions ──────────────────────────────────────
+router.post("/generate-questions", async (req, res) => {
+  try {
+    const { missingSkills, role } = req.body;
+    if (!missingSkills || !role) {
+      return res.status(400).json({ error: "missingSkills and role are required." });
+    }
+    const questions = await generateInterviewQuestions(missingSkills, role);
+    res.json(questions);
+  } catch (err) {
+    res.status(500).json({ error: "Failed to generate questions.", detail: err.message });
+  }
+});
+
+// ── POST /api/analyze/chat ─────────────────────────────────────────────────────
+router.post("/chat", async (req, res) => {
+  try {
+    const { message, history } = req.body;
+    if (!message) return res.status(400).json({ error: "Message is required." });
+    const response = await chatWithGemini(history || [], message);
+    res.json({ response });
+  } catch (err) {
+    res.status(500).json({ error: "Chatbot error.", detail: err.message });
+  }
+});
+
+// ── POST /api/analyze ────────────────────────────────────────────────────────
 router.post("/", async (req, res) => {
   const { resumeText, jobDescription, hoursPerWeek } = req.body;
 
   if (!resumeText?.trim() || !jobDescription?.trim())
     return res.status(400).json({ error: "resumeText and jobDescription are required." });
 
-  // Ensure daemon is alive
   try {
     await ensureDaemon();
   } catch (err) {
@@ -194,20 +195,17 @@ router.post("/", async (req, res) => {
   }
 
   const requestId = crypto.randomUUID();
-  const payload   = { id: requestId, resumeText, jobDescription, hoursPerWeek: hoursPerWeek || 10 };
-  const wantsSSE  = req.headers.accept?.includes("text/event-stream");
+  const payload = { id: requestId, resumeText, jobDescription, hoursPerWeek: hoursPerWeek || 10 };
+  const wantsSSE = req.headers.accept?.includes("text/event-stream");
 
-  // ── SSE streaming path ─────────────────────────────────────────────────
   if (wantsSSE) {
-    res.setHeader("Content-Type",      "text/event-stream");
-    res.setHeader("Cache-Control",     "no-cache");
-    res.setHeader("Connection",        "keep-alive");
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
     res.setHeader("X-Accel-Buffering", "no");
     res.flushHeaders();
 
-    const sse = (event, data) =>
-      res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
-
+    const sse = (event, data) => res.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
     sse("connected", { requestId });
 
     try {
@@ -226,7 +224,6 @@ router.post("/", async (req, res) => {
       sse("complete", { id: savedId, requestId, ...result });
       res.write("event: done\ndata: {}\n\n");
       res.end();
-
     } catch (err) {
       console.error("[analyze] SSE error:", err.message);
       sse("error", { error: err.message });
@@ -235,10 +232,9 @@ router.post("/", async (req, res) => {
     return;
   }
 
-  // ── JSON fallback (for clients that don't support SSE) ─────────────────
   try {
     const result = await queryDaemon(payload, null);
-    const doc    = await Result.create({ resumeText, jobDescription, ...result, requestId });
+    const doc = await Result.create({ resumeText, jobDescription, ...result, requestId });
     return res.status(200).json({ id: doc._id, requestId, ...result });
   } catch (err) {
     console.error("[analyze] JSON mode error:", err.message);
@@ -246,10 +242,4 @@ router.post("/", async (req, res) => {
   }
 });
 
-// ── GET /api/analyze/health ──────────────────────────────────────────────────
-
-router.get("/health", (_req, res) => {
-  res.json({ daemon: _ready ? "ready" : "offline", mode: SF_MODE, pid: _proc?.pid ?? null });
-});
-
-module.exports = router;
+export default router;

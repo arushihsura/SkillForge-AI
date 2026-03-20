@@ -64,7 +64,7 @@ function History() {
       >
         <motion.header variants={itemVariants} className="sf-card p-7 md:p-8">
           <h1 className="sf-title text-3xl font-bold text-white md:text-5xl">Analysis History</h1>
-          <p className="mt-3 text-base text-slate-300">Track your career intelligence journey.</p>
+          <p className="mt-3 text-base" style={{ color: 'var(--text-secondary)' }}>Track your career intelligence journey.</p>
         </motion.header>
 
         <motion.section variants={itemVariants} className="sf-card p-5 md:p-6">
@@ -75,15 +75,17 @@ function History() {
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Search by role"
               className="sf-input text-sm"
+              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-soft)' }}
             />
 
             <select
               value={roleFilter}
               onChange={(e) => setRoleFilter(e.target.value)}
               className="sf-input text-sm"
+              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-soft)' }}
             >
               {roleOptions.map((role) => (
-                <option key={role} value={role} className="bg-slate-900">
+                <option key={role} value={role} style={{ backgroundColor: 'var(--bg-primary)' }}>
                   {role === "all" ? "All Roles" : role}
                 </option>
               ))}
@@ -94,6 +96,7 @@ function History() {
               value={dateFilter}
               onChange={(e) => setDateFilter(e.target.value)}
               className="sf-input text-sm"
+              style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--bg-soft)' }}
             />
           </div>
         </motion.section>
@@ -101,7 +104,7 @@ function History() {
         <motion.section variants={itemVariants} className="sf-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="bg-white/5 text-slate-400">
+              <thead style={{ backgroundColor: 'rgba(255, 255, 255, 0.05)', color: 'var(--text-secondary)' }}>
                 <tr>
                   <th className="px-5 py-4 font-semibold uppercase tracking-wider text-[11px]">Date</th>
                   <th className="px-5 py-4 font-semibold uppercase tracking-wider text-[11px]">Job Role</th>
@@ -109,10 +112,10 @@ function History() {
                   <th className="px-5 py-4 font-semibold uppercase tracking-wider text-[11px]">Actions</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-white/5">
+              <tbody style={{ borderColor: 'var(--border-color)' }}>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-5 py-12 text-center text-slate-500 italic">
+                    <td colSpan={4} className="px-5 py-12 text-center italic" style={{ color: 'var(--text-secondary)' }}>
                       No records found. Start a new analysis to see results here.
                     </td>
                   </tr>
@@ -122,12 +125,13 @@ function History() {
                       key={`${item.id}-${item.createdAt}`} 
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
-                      className="transition-colors hover:bg-white/[0.03]"
+                      className="transition-colors"
+                      style={{ borderTop: '1px solid var(--border-color)' }}
                     >
-                      <td className="px-5 py-4 text-slate-400">{item.displayDate}</td>
-                      <td className="px-5 py-4 font-medium text-slate-200">{item.role}</td>
+                      <td className="px-5 py-4" style={{ color: 'var(--text-secondary)' }}>{item.displayDate}</td>
+                      <td className="px-5 py-4 font-medium text-white">{item.role}</td>
                       <td className="px-5 py-4">
-                        <span className="rounded-full bg-accent/15 px-3 py-1 text-[11px] font-bold text-accent" style={{ color: 'var(--accent-primary)', backgroundColor: 'color-mix(in srgb, var(--accent-primary) 15%, transparent)' }}>
+                        <span className="rounded-full px-3 py-1 text-[11px] font-bold" style={{ color: 'var(--accent-primary)', backgroundColor: 'color-mix(in srgb, var(--accent-primary) 15%, transparent)' }}>
                           {item.coverage}%
                         </span>
                       </td>

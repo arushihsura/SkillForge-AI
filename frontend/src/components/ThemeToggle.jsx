@@ -6,6 +6,7 @@ const themes = [
   { id: "emerald", name: "Emerald", color: "#34d399" },
   { id: "rose", name: "Midnight Rose", color: "#fb7185" },
   { id: "gold", name: "Royal Gold", color: "#ffb012" },
+  { id: "matrix", name: "Cyber Matrix", color: "#00ff41" },
 ];
 
 const ThemeToggle = () => {

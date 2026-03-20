@@ -21,8 +21,14 @@ function Landing() {
   return (
     <div className="sf-page relative overflow-hidden">
       <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-cyan-500/20 blur-3xl" />
-        <div className="absolute bottom-0 right-0 h-80 w-80 rounded-full bg-fuchsia-500/15 blur-3xl" />
+        <div 
+          className="absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full blur-3xl opacity-40" 
+          style={{ backgroundColor: 'var(--glow-1)' }}
+        />
+        <div 
+          className="absolute bottom-0 right-0 h-80 w-80 rounded-full blur-3xl opacity-30" 
+          style={{ backgroundColor: 'var(--glow-2)' }}
+        />
         <div className="grid-overlay absolute inset-0 opacity-35" />
       </div>
 
@@ -34,13 +40,20 @@ function Landing() {
           className="grid items-center gap-14 pb-28 pt-10 md:grid-cols-2 md:pt-16"
         >
           <motion.div variants={itemVariants}>
-            <p className="mb-4 inline-flex rounded-full border border-cyan-300/40 bg-cyan-300/10 px-4 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-cyan-200">
+            <p 
+              className="mb-4 inline-flex rounded-full border px-4 py-1 text-xs font-semibold uppercase tracking-[0.18em]"
+              style={{ 
+                borderColor: 'color-mix(in srgb, var(--accent-primary) 40%, transparent)',
+                backgroundColor: 'color-mix(in srgb, var(--accent-primary) 10%, transparent)',
+                color: 'var(--text-secondary)'
+              }}
+            >
               AI-Powered Onboarding
             </p>
             <h1 className="sf-title text-5xl font-bold leading-[1.05] md:text-7xl">
               Adaptive Onboarding Engine
             </h1>
-            <p className="mt-7 max-w-xl text-xl leading-relaxed text-slate-300">
+            <p className="mt-7 max-w-xl text-xl leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
               Personalized learning paths based on your skills. Our v3 engine uses probabilistic inference to map your career trajectory.
             </p>
             <div className="mt-10 flex flex-wrap gap-4">
@@ -67,31 +80,32 @@ function Landing() {
             variants={itemVariants}
             className="relative"
           >
-            <div className="absolute -left-8 -top-8 h-24 w-24 rounded-full border border-cyan-300/20 bg-cyan-300/10 blur-sm" />
-            <div className="absolute -bottom-10 right-0 h-28 w-28 rounded-full border border-fuchsia-300/25 bg-fuchsia-300/10 blur-sm" />
+            <div className="absolute -left-8 -top-8 h-24 w-24 rounded-full border blur-sm opacity-30" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--glow-1)' }} />
+            <div className="absolute -bottom-10 right-0 h-28 w-28 rounded-full border blur-sm opacity-30" style={{ borderColor: 'var(--border-color)', backgroundColor: 'var(--glow-2)' }} />
 
             <div className="sf-card relative p-6 mt-10 md:mt-0">
               <div className="mb-4 flex items-center justify-between">
-                <p className="text-sm text-slate-300">Onboarding Intelligence</p>
-                <span className="rounded-full bg-emerald-400/20 px-3 py-1 text-xs font-medium text-emerald-300">
+                <p className="text-sm" style={{ color: 'var(--text-secondary)' }}>Onboarding Intelligence</p>
+                <span className="rounded-full px-3 py-1 text-xs font-medium" style={{ backgroundColor: 'color-mix(in srgb, var(--accent-secondary) 20%, transparent)', color: 'var(--accent-secondary)' }}>
                   Live
                 </span>
               </div>
 
               <div className="space-y-3">
                 {[
-                  { label: "Skill Match", color: "bg-cyan-400", width: "75%" },
-                  { label: "Learning Path Progress", color: "bg-fuchsia-400", width: "50%" },
-                  { label: "AI Confidence", color: "bg-emerald-400", width: "88%" }
+                  { label: "Skill Match", color: 'var(--accent-primary)', width: "75%" },
+                  { label: "Learning Path Progress", color: 'var(--accent-secondary)', width: "50%" },
+                  { label: "AI Confidence", color: 'var(--accent-primary)', width: "88%" }
                 ].map((bar, i) => (
-                  <div key={i} className="rounded-xl border border-slate-700 bg-slate-950/70 p-3">
-                    <p className="text-xs text-slate-400">{bar.label}</p>
-                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-800">
+                  <div key={i} className="rounded-xl border border-white/5 bg-white/5 p-3">
+                    <p className="text-xs" style={{ color: 'var(--text-secondary)' }}>{bar.label}</p>
+                    <div className="mt-2 h-2 overflow-hidden rounded-full bg-black/40">
                       <motion.div 
                         initial={{ width: 0 }}
                         animate={{ width: bar.width }}
                         transition={{ duration: 1, delay: 0.5 + i * 0.2 }}
-                        className={`h-full rounded-full ${bar.color}`} 
+                        className="h-full rounded-full" 
+                        style={{ backgroundColor: bar.color }}
                       />
                     </div>
                   </div>
@@ -111,22 +125,22 @@ function Landing() {
               pauseOnHover={false}
             >
               <Card>
-                <h3 className="font-space text-2xl font-semibold text-cyan-300">Skill Gap Analysis</h3>
-                <p className="mt-4 text-slate-300">
+                <h3 className="font-space text-2xl font-semibold" style={{ color: 'var(--accent-primary)' }}>Skill Gap Analysis</h3>
+                <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>
                   Detect missing capabilities between current strengths and role requirements using Bayesian inference.
                 </p>
               </Card>
               <Card>
-                <h3 className="font-space text-2xl font-semibold text-fuchsia-300">Adaptive Learning Path</h3>
-                <p className="mt-4 text-slate-300">
+                <h3 className="font-space text-2xl font-semibold" style={{ color: 'var(--accent-secondary)' }}>Adaptive Learning Path</h3>
+                <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>
                   Dynamic roadmaps optimized via Pareto-frontier scheduling for speed and ROI.
                 </p>
               </Card>
               <Card>
-                <h3 className="font-space text-2xl font-semibold text-emerald-300">
+                <h3 className="font-space text-2xl font-semibold" style={{ color: 'var(--accent-primary)' }}>
                   Explainable AI recommendations
                 </h3>
-                <p className="mt-4 text-slate-300">
+                <p className="mt-4" style={{ color: 'var(--text-secondary)' }}>
                   Transparent reasoning trace for every skill identified and learning resource suggested.
                 </p>
               </Card>
@@ -152,7 +166,7 @@ function Landing() {
                 <BorderGlow
                   edgeSensitivity={30}
                   glowColor="40 80 80"
-                  backgroundColor="#060010"
+                  backgroundColor="var(--bg-primary)"
                   borderRadius={28}
                   glowRadius={40}
                   glowIntensity={1}
@@ -161,7 +175,7 @@ function Landing() {
                   colors={item.colors}
                 >
                   <div style={{ padding: "2em" }}>
-                    <p className="text-sm uppercase tracking-[0.2em] text-slate-400">Step {item.step}</p>
+                    <p className="text-sm uppercase tracking-[0.2em]" style={{ color: 'var(--text-secondary)' }}>Step {item.step}</p>
                     <p className="mt-2 font-space text-2xl font-semibold text-white">{item.label}</p>
                   </div>
                 </BorderGlow>

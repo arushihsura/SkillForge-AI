@@ -1200,75 +1200,96 @@ class SkillDecayForecaster:
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# STAGE 12: COUNTERFACTUAL KEYSTONE ANALYSIS
+# STAGE 13: SHAP MODEL EXPLAINABILITY
 # ═══════════════════════════════════════════════════════════════════════════
 
-class CounterfactualExplorer:
+class ShapExplainer:
     """
-    Finds the KEYSTONE skill: the single gap whose closure maximises
-    immediate readiness improvement × market velocity × salary impact.
-    Also ranks every gap skill by its marginal impact score,
-    answering: "If I could learn only ONE skill this month, which is it?"
+    Computes SHAP (SHapley Additive exPlanations) for the readiness score.
+    Since we use a probabilistic model, we treat each JD-required skill as a feature.
+    We perturb the 'presence' of these skills in the resume and measure 
+    the change in readiness. 
+    
+    Returns {skill: shap_value} where positive value = contribution to score.
     """
 
-    def analyze(self, enriched_gaps, resume_skills, job_skills, matched, soft_matched) -> dict:
-        jd  = set(job_skills)
-        n   = max(1, len(jd))
-        all_c = {m["skill"]: m["confidence"] for m in matched}
-        all_c.update({s["skill"]: s["confidence"]*0.5 for s in soft_matched})
-        base_score = sum(all_c.get(s, 0) for s in jd) / n
+    def explain(self, engine: SkillForgeEngine, resume_skills: dict[str, float], job_skills: list[str]) -> dict[str, float]:
+        if not job_skills:
+            return {}
+            
+        try:
+            import numpy as np
+            import shap
+            import pandas as pd
+        except ImportError:
+            return {}
 
-        table = []
-        for gap in enriched_gaps:
-            sk = gap["skill"]
-            if sk not in jd:
-                continue
-            hypo = {**all_c, sk: 0.85}
-            delta = (sum(hypo.get(s,0) for s in jd)/n - base_score) * 100
-            # Skills that become fully prereq-satisfied once we acquire sk
-            unlocks = []
-            for other in jd:
-                if other in all_c: continue
-                prereqs = {p for p,_ in PREREQ_GRAPH.get(other,[])}
-                if sk in prereqs and not (prereqs - set(resume_skills) - {sk}):
-                    unlocks.append(other)
-            composite = (delta/100)*0.45 + MARKET_VELOCITY.get(sk,DEFAULT_MARKET_VELOCITY)*0.30 + SALARY_IMPACT.get(sk,DEFAULT_SALARY_IMPACT)*0.25
-            table.append({
-                "skill": sk,
-                "readinessDeltaPct": round(delta, 1),
-                "unlocks": unlocks,
-                "marketVelocity": MARKET_VELOCITY.get(sk, DEFAULT_MARKET_VELOCITY),
-                "salaryImpact":   SALARY_IMPACT.get(sk, DEFAULT_SALARY_IMPACT),
-                "compositeScore": round(composite, 4),
-            })
+        # Define a prediction function for SHAP
+        def predict_readiness(X):
+            # X is an N x M matrix where N is number of samples, M is number of jd_skills
+            # 1 = skill present in resume (with 0.9 confidence), 0 = skill absent
+            results = []
+            for row in X:
+                temp_resume = dict(resume_skills)
+                for i, skill in enumerate(job_skills):
+                    if row[i] > 0.5:
+                        temp_resume[skill] = max(temp_resume.get(skill, 0.0), 0.9)
+                    else:
+                        # Only remove if it was part of the original match
+                        if skill in temp_resume:
+                            del temp_resume[skill]
+                
+                # Run the readiness calculation (Stage 5)
+                # For speed, we just compute the core readiness score
+                jd_set = set(job_skills)
+                total_w = len(jd_set)
+                if total_w == 0:
+                    results.append(100.0)
+                    continue
+                
+                # Check coverage
+                gained = 0.0
+                for s in jd_set:
+                    conf = temp_resume.get(s, 0.0)
+                    if conf >= MATCH_THRESHOLD:
+                        gained += conf
+                    elif conf >= 0.25:
+                        gained += conf * 0.5
+                
+                results.append(min(100.0, 100.0 * gained / total_w))
+            return np.array(results)
 
-        table.sort(key=lambda x: -x["compositeScore"])
-        ks = table[0] if table else None
-        narrative = ""
-        if ks:
-            kn, kd, ku = ks["skill"], ks["readinessDeltaPct"], ks["unlocks"]
-            narrative = (
-                f"Learning `{kn}` first raises readiness by {kd:.1f}%"
-                + (f" and directly unlocks: {', '.join(ku)}." if ku else ".")
-                + f" Market velocity: {round(MARKET_VELOCITY.get(kn,0.5)*10)}/10."
-            )
-        return {
-            "keystoneSkill": ks["skill"] if ks else None,
-            "keystoneImpact": ks,
-            "marginalImpactRanking": table,
-            "scenarioNarrative": narrative,
-        }
+        # Create a background dataset (all zeros, all ones, etc.)
+        X_bg = np.zeros((1, len(job_skills)))
+        
+        # Current state: which JD skills do we actually have?
+        X_curr = np.zeros((1, len(job_skills)))
+        for i, s in enumerate(job_skills):
+            if resume_skills.get(s, 0.0) >= MATCH_THRESHOLD:
+                X_curr[0, i] = 1
+
+        # Use KernelExplainer as the model is non-linear and custom
+        explainer = shap.KernelExplainer(predict_readiness, X_bg, silent=True)
+        shap_values = explainer.shap_values(X_curr)
+        
+        # Map back to skill names
+        # shap_values is a list for multi-output or an array; here it's 1D array per sample
+        if isinstance(shap_values, list):
+            sv = shap_values[0].flatten()
+        else:
+            sv = shap_values.flatten()
+            
+        return {skill: round(float(sv[i]), 2) for i, skill in enumerate(job_skills)}
 
 
 # ═══════════════════════════════════════════════════════════════════════════
-# ORCHESTRATOR — v3 (12 stages)
+# ORCHESTRATOR — v3.1 (13 stages)
 # ═══════════════════════════════════════════════════════════════════════════
 
 class SkillForgeEngine:
     """
-    Main entry point — v3.
+    Main entry point — v3.1.
     analyze(resume_text, jd_text, hours_per_week) → full JSON payload.
-    Backward-compatible: all v2 keys are preserved. New v3 keys are additive.
     """
 
     def __init__(self) -> None:
@@ -1286,14 +1307,19 @@ class SkillForgeEngine:
         self.interview  = InterviewReadinessModel()
         self.decay      = SkillDecayForecaster()
         self.cf         = CounterfactualExplorer()
+        # v3.1 stage
+        self.shap_expl  = ShapExplainer()
+
+    def _extract_jd_skills(self, jd_text: str) -> list[str]:
+        raw = self.extractor.extract(jd_text)
+        return sorted(s for s, c in raw.items() if c >= 0.60)
 
     def analyze(self, resume_text: str, jd_text: str, hours_per_week: int = 10) -> dict[str, Any]:
         trace: list[str] = []
 
-        # ── Stages 1-5 (v2, unchanged) ────────────────────────────────────
+        # ── Stages 1-5 (v2) ────────────────────────────────────────────────
         resume_skills = self.extractor.extract(resume_text)
-        jd_skills_raw = self.extractor.extract(jd_text)
-        job_skills    = sorted(s for s, c in jd_skills_raw.items() if c >= 0.60)
+        job_skills    = self._extract_jd_skills(jd_text)
         trace.append(f"Stage 1 — Bayesian Extraction: {len(resume_skills)} resume signals, {len(job_skills)} JD requirements.")
 
         matched, raw_gaps, soft_matched = self.comparator.compare(resume_skills, job_skills)
@@ -1321,23 +1347,26 @@ class SkillForgeEngine:
         trace.append(f"Stage 7 — Market Pulse: {len(market_pulse['trendingSkills'])} trending, inflation {market_pulse['jdInflationScore']}/100.")
 
         pareto_frontier = self.pareto.optimize(enriched_gaps, have_set, job_skills, hours_per_week, self.transfer, resume_skills)
-        trace.append(f"Stage 8 — Pareto Optimizer: {len(pareto_frontier)} non-dominated schedules generated.")
+        trace.append(f"Stage 8 — Pareto Optimizer: {len(pareto_frontier)} schedules generated.")
 
         benchmark = self.applicants.simulate(job_skills, readiness["currentReadinessPct"])
-        trace.append(f"Stage 9 — Cohort Sim ({benchmark['simulatedApplicants']} applicants): {benchmark['percentile']}th percentile.")
+        trace.append(f"Stage 9 — Cohort Sim: {benchmark['percentile']}th percentile.")
 
         interview = self.interview.compute(matched, soft_matched, enriched_gaps, job_skills, learning_path)
-        trace.append(f"Stage 10 — Interview Ladder: P(hire|now)={interview['overallHireProbabilityNow']:.1%}, P(hire|path)={interview['overallHireProbabilityAfterPath']:.1%}.")
+        trace.append(f"Stage 10 — Interview Ladder: P(hire|now)={interview['overallHireProbabilityNow']:.1%}.")
 
         decay_alerts = self.decay.forecast(resume_skills)
-        trace.append(f"Stage 11 — Decay Forecast: {len(decay_alerts)} skill(s) at risk within 12 months.")
+        trace.append(f"Stage 11 — Decay Forecast: {len(decay_alerts)} skill(s) at risk.")
 
         cf = self.cf.analyze(enriched_gaps, resume_skills, job_skills, matched, soft_matched)
         if cf["keystoneSkill"]:
-            trace.append(f"Stage 12 — Counterfactual: keystone=`{cf['keystoneSkill']}` (+{cf['keystoneImpact']['readinessDeltaPct']}% readiness).")
+            trace.append(f"Stage 12 — Counterfactual: keystone=`{cf['keystoneSkill']}`.")
+
+        # ── Stage 13 (v3.1 - SHAP) ────────────────────────────────────────
+        shap_values = self.shap_expl.explain(self, resume_skills, job_skills)
+        trace.append(f"Stage 13 — SHAP Explainability: model transparency factors generated.")
 
         return {
-            # ── v2 (fully backward-compatible) ─────────────────────────
             "resumeSkills":   sorted([{"skill": s, "confidence": round(c,3)} for s,c in resume_skills.items()],
                                      key=lambda x: -x["confidence"]),
             "jobSkills":      job_skills,
@@ -1358,7 +1387,6 @@ class SkillForgeEngine:
                 "estimatedWeeksToReady": est_weeks,
                 "estimatedTotalHours":   total_hours,
             },
-            # ── v3 (new) ────────────────────────────────────────────────
             "transferBonuses":    transfer_bonuses,
             "marketPulse":        market_pulse,
             "paretoFrontier":     pareto_frontier,
@@ -1366,6 +1394,7 @@ class SkillForgeEngine:
             "interviewReadiness": interview,
             "decayAlerts":        decay_alerts,
             "counterfactual":     cf,
+            "shapValues":         shap_values,
         }
 
 
@@ -1395,7 +1424,7 @@ def _serve_flask(port: int = 8001) -> None:
 
     @app.route("/ml/health")
     def health():
-        return jsonify({"status": "ok", "model": "SkillForge Probabilistic Engine v2"})
+        return jsonify({"status": "ok", "model": "SkillForge Probabilistic Engine v3.1"})
 
     print(f"SkillForge ML service → http://0.0.0.0:{port}")
     app.run(host="0.0.0.0", port=port)
@@ -1420,30 +1449,9 @@ if __name__ == "__main__":
             hpw = int(body.get("hoursPerWeek", 10))
 
             emit("stage", stage=1, label="Bayesian Skill Extraction", ms=10)
-            skills_confidence = engine.extractor.extract(resume_text)
-            jd_skills = engine._extract_jd_skills(jd_text)
+            res = engine.analyze(resume_text, jd_text, hpw)
             
-            emit("stage", stage=2, label="Comparison & Gap Discovery", ms=20)
-            matched, gaps, soft = engine.comparator.compare(skills_confidence, jd_skills)
-            
-            emit("stage", stage=3, label="Graph Reasoning & Market Priority", ms=30)
-            have_set = {s for s, c in skills_confidence.items() if c >= 0.55}
-            enriched = engine.reasoner.enrich(gaps, have_set, jd_skills)
-            
-            emit("stage", stage=4, label="Dijkstra Path Planning", ms=40)
-            path = engine.planner.plan(enriched, have_set, hpw)
-            
-            emit("stage", stage=5, label="Readiness Forecast", ms=50)
-            readiness = engine.readiness.compute(matched, soft, enriched, jd_skills, path, hpw)
-
-            final_data = {
-                "skills": {"resumeSkills": list(skills_confidence.keys()), "jdSkills": jd_skills},
-                "matched": matched,
-                "gaps": enriched,
-                "path": path,
-                "readiness": readiness
-            }
-            emit("complete", data=final_data)
+            emit("complete", data=res)
         except Exception as e:
             print(json.dumps({"event": "error", "error": str(e)}), flush=True)
         sys.exit(0)
@@ -1455,35 +1463,9 @@ if __name__ == "__main__":
         sys.exit(0)
 
     # ── Self-test ──────────────────────────────────────────────────────────
-    RESUME = """
-    Senior ML Engineer, 5 years experience.
-    Built production RAG pipeline using LangChain and Pinecone for a 10M-user product.
-    Fine-tuned LLaMA-2 with LoRA for domain-specific tasks (2023).
-    Designed and trained a transformer-based NLP model from scratch for text classification.
-    Deployed models via FastAPI on Kubernetes with Prometheus monitoring.
-    Built Airflow DAGs for ML feature pipelines ingesting 2TB/day.
-    Proficient in Python, PyTorch, pandas, and SQL.
-    Familiar with AWS (SageMaker, S3, Lambda).
-    Led cross-functional teams using Agile/Scrum.
-    """
-
-    JD = """
-    Staff ML Research Engineer — Generative AI
-    We're looking for someone to:
-    - Lead LLM fine-tuning and RLHF experiments
-    - Build RAG systems with vector databases at scale
-    - Design MLOps infrastructure (model monitoring, A/B testing, CI/CD)
-    - Write distributed training code in PyTorch using JAX/XLA as needed
-    - Work with Kubernetes, Terraform, and GitHub Actions
-    - Collaborate with data engineers on Spark and dbt pipelines
-    - Drive system design decisions for ML infra serving 100M requests/day
-    - Strong statistics / causal inference background required
-    """
-
+    RESUME = """Senior ML Engineer..."""
+    JD = """Staff ML Research Engineer..."""
     t0 = time.time()
     engine = SkillForgeEngine()
     result = engine.analyze(RESUME, JD, hours_per_week=12)
-    elapsed = (time.time() - t0) * 1000
-
     print(json.dumps(result, indent=2))
-    print(f"\n⏱  Completed in {elapsed:.1f}ms", file=sys.stderr)

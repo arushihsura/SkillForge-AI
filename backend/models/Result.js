@@ -5,7 +5,7 @@
  * Drop this into backend/models/Result.js
  */
 
-const mongoose = require("mongoose");
+import mongoose from "mongoose";
 const { Schema } = mongoose;
 
 // ── Sub-schemas ──────────────────────────────────────────────────────────────
@@ -84,6 +84,7 @@ const ResultSchema = new Schema(
     learningPath:  [LearningStepSchema],
     kpis:          KpisSchema,
     reasoningTrace: [String],
+    shapValues:    { type: Map, of: Number }, // Added for SHAP explainability
   },
   {
     timestamps: true,   // adds createdAt + updatedAt automatically
@@ -94,4 +95,5 @@ const ResultSchema = new Schema(
 // Index for history queries: user-facing "my past analyses" sorted by date
 ResultSchema.index({ createdAt: -1 });
 
-module.exports = mongoose.models.Result || mongoose.model("Result", ResultSchema);
+const Result = mongoose.models.Result || mongoose.model("Result", ResultSchema);
+export default Result;
