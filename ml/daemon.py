@@ -25,7 +25,7 @@ from typing import AsyncIterator
 
 # Import from the v2 engine in the same directory
 sys.path.insert(0, os.path.dirname(__file__))
-from skill_engine_v2 import (
+from skill_gap_model import (
     SkillForgeEngine,
     BayesianSkillExtractor,
     SkillComparator,
@@ -94,7 +94,7 @@ class StreamingEngine:
 
         # ── Stage 1: Extract ──────────────────────────────────────────────
         # Run in executor so we don't block the event loop
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
 
         resume_skills = await loop.run_in_executor(
             None, self.extractor.extract, resume_text

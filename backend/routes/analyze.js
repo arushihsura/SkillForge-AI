@@ -78,7 +78,7 @@ async function ensureDaemon() {
   _proc.stderr.on("data", (d) => {
     const t = d.toString().trim();
     // Surface import errors or tracebacks — hide normal asyncio noise
-    if (t && !t.startsWith("Traceback") === false || t.includes("Error") || t.includes("error")) {
+    if (t && (t.startsWith("Traceback") || t.includes("Error") || t.includes("error"))) {
       console.error("[daemon]", t);
     }
   });
