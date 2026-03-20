@@ -1,6 +1,58 @@
 @import url("https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700;800&family=Space+Grotesk:wght@500;700&display=swap");
 @import "tailwindcss";
 
+:root {
+  /* Default Cyberpunk Theme (Onyx/Cyan) */
+  --bg-primary: #020617;
+  --bg-card: linear-gradient(180deg, rgba(15, 23, 42, 0.8), rgba(2, 6, 23, 0.9));
+  --bg-soft: rgba(15, 23, 42, 0.62);
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --accent-primary: #22d3ee;
+  --accent-secondary: #818cf8;
+  --btn-grad: linear-gradient(135deg, #22d3ee 0%, #38bdf8 48%, #818cf8 100%);
+  --border-color: rgba(148, 163, 184, 0.2);
+  --selection-bg: rgba(34, 211, 238, 0.35);
+  --glow-1: rgba(34, 211, 238, 0.18);
+  --glow-2: rgba(99, 102, 241, 0.14);
+}
+
+[data-theme="emerald"] {
+  --bg-primary: #021a14;
+  --bg-card: linear-gradient(180deg, rgba(6, 78, 59, 0.3), rgba(2, 26, 20, 0.9));
+  --bg-soft: rgba(6, 78, 59, 0.2);
+  --accent-primary: #34d399;
+  --accent-secondary: #10b981;
+  --btn-grad: linear-gradient(135deg, #34d399 0%, #10b981 100%);
+  --selection-bg: rgba(52, 211, 153, 0.35);
+  --glow-1: rgba(52, 211, 153, 0.18);
+  --glow-2: rgba(16, 185, 129, 0.14);
+}
+
+[data-theme="rose"] {
+  --bg-primary: #1a020b;
+  --bg-card: linear-gradient(180deg, rgba(159, 18, 57, 0.25), rgba(26, 2, 11, 0.95));
+  --bg-soft: rgba(159, 18, 57, 0.15);
+  --accent-primary: #fb7185;
+  --accent-secondary: #e11d48;
+  --btn-grad: linear-gradient(135deg, #fb7185 0%, #e11d48 100%);
+  --selection-bg: rgba(251, 113, 133, 0.35);
+  --glow-1: rgba(251, 113, 133, 0.18);
+  --glow-2: rgba(225, 29, 72, 0.14);
+}
+
+[data-theme="gold"] {
+  --bg-primary: #0f0b01;
+  --bg-card: linear-gradient(180deg, rgba(120, 83, 4, 0.2), rgba(15, 11, 1, 0.98));
+  --bg-soft: rgba(120, 83, 4, 0.15);
+  --accent-primary: #ffb012;
+  --accent-secondary: #d97706;
+  --btn-grad: linear-gradient(135deg, #fbbf24 0%, #d97706 100%);
+  --selection-bg: rgba(251, 191, 36, 0.35);
+  --glow-1: rgba(251, 191, 36, 0.15);
+  --glow-2: rgba(217, 119, 6, 0.1);
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -9,11 +61,12 @@ body {
   margin: 0;
   font-family: "Manrope", sans-serif;
   background:
-    radial-gradient(circle at 20% 15%, rgba(34, 211, 238, 0.18), transparent 28%),
-    radial-gradient(circle at 85% 20%, rgba(99, 102, 241, 0.14), transparent 26%),
-    #020617;
+    radial-gradient(circle at 20% 15%, var(--glow-1), transparent 28%),
+    radial-gradient(circle at 85% 20%, var(--glow-2), transparent 26%),
+    var(--bg-primary);
   color: #e2e8f0;
   letter-spacing: 0.01em;
+  transition: background 0.5s ease;
 }
 
 #root {
@@ -25,7 +78,7 @@ body {
 }
 
 ::selection {
-  background: rgba(34, 211, 238, 0.35);
+  background: var(--selection-bg);
   color: #f8fafc;
 }
 
@@ -45,27 +98,28 @@ body {
 }
 
 .sf-card {
-  border: 1px solid rgba(148, 163, 184, 0.2);
-  background: linear-gradient(180deg, rgba(15, 23, 42, 0.8), rgba(2, 6, 23, 0.9));
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
   border-radius: 1.25rem;
   box-shadow: 0 18px 50px rgba(2, 8, 23, 0.55), inset 0 1px 0 rgba(148, 163, 184, 0.12);
   backdrop-filter: blur(10px);
+  transition: transform 0.3s ease, background 0.5s ease;
 }
 
 .sf-soft-card {
   border: 1px solid rgba(148, 163, 184, 0.16);
-  background: rgba(15, 23, 42, 0.62);
+  background: var(--bg-soft);
   border-radius: 1rem;
 }
 
 .sf-title {
   font-family: "Space Grotesk", sans-serif;
-  color: #f8fafc;
+  color: var(--text-primary);
   letter-spacing: -0.02em;
 }
 
 .sf-subtle {
-  color: #94a3b8;
+  color: var(--text-secondary);
 }
 
 .sf-input {
@@ -80,19 +134,20 @@ body {
 }
 
 .sf-input:focus {
-  border-color: rgba(34, 211, 238, 0.85);
+  border-color: var(--accent-primary);
   box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.22);
   transform: translateY(-1px);
 }
 
 .sf-btn-primary {
   border-radius: 0.9rem;
-  background: linear-gradient(135deg, #22d3ee 0%, #38bdf8 48%, #818cf8 100%);
+  background: var(--btn-grad);
   color: #020617;
   font-weight: 700;
   border: none;
   transition: transform 180ms ease, filter 180ms ease, box-shadow 180ms ease;
   box-shadow: 0 12px 30px rgba(34, 211, 238, 0.25);
+  cursor: pointer;
 }
 
 .sf-btn-primary:hover {
@@ -106,10 +161,11 @@ body {
   background: rgba(15, 23, 42, 0.72);
   color: #e2e8f0;
   transition: border-color 160ms ease, transform 160ms ease;
+  cursor: pointer;
 }
 
 .sf-btn-secondary:hover {
-  border-color: rgba(148, 163, 184, 0.95);
+  border-color: var(--text-secondary);
   transform: translateY(-1px);
 }
 

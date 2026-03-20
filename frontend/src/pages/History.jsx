@@ -1,5 +1,19 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
+import { motion } from "framer-motion";
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.05 }
+  }
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, x: -10 },
+  show: { opacity: 1, x: 0 }
+};
 
 function History() {
   const [query, setQuery] = useState("");
@@ -42,13 +56,18 @@ function History() {
 
   return (
     <div className="sf-page px-4 py-8 md:px-6">
-      <div className="sf-shell space-y-7">
-        <header className="sf-card p-7 md:p-8">
+      <motion.div 
+        variants={containerVariants}
+        initial="hidden"
+        animate="show"
+        className="sf-shell space-y-7"
+      >
+        <motion.header variants={itemVariants} className="sf-card p-7 md:p-8">
           <h1 className="sf-title text-3xl font-bold text-white md:text-5xl">Analysis History</h1>
-          <p className="mt-3 text-base text-slate-300">Search and filter your past analyses.</p>
-        </header>
+          <p className="mt-3 text-base text-slate-300">Track your career intelligence journey.</p>
+        </motion.header>
 
-        <section className="sf-card p-5 md:p-6">
+        <motion.section variants={itemVariants} className="sf-card p-5 md:p-6">
           <div className="grid gap-3 md:grid-cols-3">
             <input
               type="text"
@@ -64,7 +83,7 @@ function History() {
               className="sf-input text-sm"
             >
               {roleOptions.map((role) => (
-                <option key={role} value={role}>
+                <option key={role} value={role} className="bg-slate-900">
                   {role === "all" ? "All Roles" : role}
                 </option>
               ))}
@@ -77,52 +96,57 @@ function History() {
               className="sf-input text-sm"
             />
           </div>
-        </section>
+        </motion.section>
 
-        <section className="sf-card overflow-hidden">
+        <motion.section variants={itemVariants} className="sf-card overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] text-left text-sm">
-              <thead className="bg-slate-950/70 text-slate-300">
+              <thead className="bg-white/5 text-slate-400">
                 <tr>
-                  <th className="px-5 py-3 font-medium">Date</th>
-                  <th className="px-5 py-3 font-medium">Job Role</th>
-                  <th className="px-5 py-3 font-medium">Skill Coverage</th>
-                  <th className="px-5 py-3 font-medium">Action</th>
+                  <th className="px-5 py-4 font-semibold uppercase tracking-wider text-[11px]">Date</th>
+                  <th className="px-5 py-4 font-semibold uppercase tracking-wider text-[11px]">Job Role</th>
+                  <th className="px-5 py-4 font-semibold uppercase tracking-wider text-[11px]">Coverage</th>
+                  <th className="px-5 py-4 font-semibold uppercase tracking-wider text-[11px]">Actions</th>
                 </tr>
               </thead>
-              <tbody>
+              <tbody className="divide-y divide-white/5">
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={4} className="px-5 py-8 text-center text-slate-400">
-                      No analyses found for the selected filters.
+                    <td colSpan={4} className="px-5 py-12 text-center text-slate-500 italic">
+                      No records found. Start a new analysis to see results here.
                     </td>
                   </tr>
                 ) : (
                   filtered.map((item) => (
-                    <tr key={`${item.id}-${item.createdAt}`} className="border-t border-slate-800 transition hover:bg-slate-800/50">
-                      <td className="px-5 py-4 text-slate-300">{item.displayDate}</td>
-                      <td className="px-5 py-4 text-slate-100">{item.role}</td>
+                    <motion.tr 
+                      key={`${item.id}-${item.createdAt}`} 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="transition-colors hover:bg-white/[0.03]"
+                    >
+                      <td className="px-5 py-4 text-slate-400">{item.displayDate}</td>
+                      <td className="px-5 py-4 font-medium text-slate-200">{item.role}</td>
                       <td className="px-5 py-4">
-                        <span className="rounded-full bg-cyan-400/15 px-3 py-1 text-xs font-medium text-cyan-200">
+                        <span className="rounded-full bg-accent/15 px-3 py-1 text-[11px] font-bold text-accent" style={{ color: 'var(--accent-primary)', backgroundColor: 'color-mix(in srgb, var(--accent-primary) 15%, transparent)' }}>
                           {item.coverage}%
                         </span>
                       </td>
                       <td className="px-5 py-4">
                         <Link
                           to={`/results/${item.id}`}
-                          className="rounded-lg border border-slate-600 px-3 py-1.5 text-xs font-medium text-slate-100 transition hover:border-cyan-400 hover:text-cyan-200"
+                          className="sf-btn-secondary px-4 py-1.5 text-xs font-semibold"
                         >
-                          View
+                          View Report
                         </Link>
                       </td>
-                    </tr>
+                    </motion.tr>
                   ))
                 )}
               </tbody>
             </table>
           </div>
-        </section>
-      </div>
+        </motion.section>
+      </motion.div>
     </div>
   );
 }

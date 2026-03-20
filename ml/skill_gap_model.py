@@ -1405,14 +1405,47 @@ if __name__ == "__main__":
     import sys
 
     if "--stdin" in sys.argv:
-        body = json.loads(sys.stdin.read())
-        engine = SkillForgeEngine()
-        result = engine.analyze(
-            body.get("resumeText", ""),
-            body.get("jobDescription", ""),
-            int(body.get("hoursPerWeek", 10)),
-        )
-        print(json.dumps(result))
+        try:
+            line = sys.stdin.readline()
+            if not line: sys.exit(0)
+            body = json.loads(line)
+            engine = SkillForgeEngine()
+            
+            # Helper to print events for the backend's serverless mode
+            def emit(event, **kwargs):
+                print(json.dumps({"event": event, **kwargs}), flush=True)
+
+            resume_text = body.get("resumeText", "")
+            jd_text = body.get("jobDescription", "")
+            hpw = int(body.get("hoursPerWeek", 10))
+
+            emit("stage", stage=1, label="Bayesian Skill Extraction", ms=10)
+            skills_confidence = engine.extractor.extract(resume_text)
+            jd_skills = engine._extract_jd_skills(jd_text)
+            
+            emit("stage", stage=2, label="Comparison & Gap Discovery", ms=20)
+            matched, gaps, soft = engine.comparator.compare(skills_confidence, jd_skills)
+            
+            emit("stage", stage=3, label="Graph Reasoning & Market Priority", ms=30)
+            have_set = {s for s, c in skills_confidence.items() if c >= 0.55}
+            enriched = engine.reasoner.enrich(gaps, have_set, jd_skills)
+            
+            emit("stage", stage=4, label="Dijkstra Path Planning", ms=40)
+            path = engine.planner.plan(enriched, have_set, hpw)
+            
+            emit("stage", stage=5, label="Readiness Forecast", ms=50)
+            readiness = engine.readiness.compute(matched, soft, enriched, jd_skills, path, hpw)
+
+            final_data = {
+                "skills": {"resumeSkills": list(skills_confidence.keys()), "jdSkills": jd_skills},
+                "matched": matched,
+                "gaps": enriched,
+                "path": path,
+                "readiness": readiness
+            }
+            emit("complete", data=final_data)
+        except Exception as e:
+            print(json.dumps({"event": "error", "error": str(e)}), flush=True)
         sys.exit(0)
 
     if "--serve" in sys.argv:

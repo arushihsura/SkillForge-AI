@@ -1,297 +1,132 @@
-# SkillForge AI
+# SkillForge AI — Probabilistic Skill Intelligence (v3)
 
-SkillForge AI is a full-stack AI-powered onboarding platform that compares resume skills with job requirements, identifies skill gaps, and generates a personalized learning path using a probabilistic ML engine.
+[![IISc Hackathon](https://img.shields.io/badge/IISc_Hack-2026-blueviolet)](https://github.com/arushihsura/SkillForge-AI)
+[![Version](https://img.shields.io/badge/Version-3.0.0-emerald)](https://github.com/arushihsura/SkillForge-AI)
+[![License](https://img.shields.io/badge/License-MIT-blue)](https://opensource.org/licenses/MIT)
 
-## Tech Stack
+SkillForge AI is a **Role-Intelligence & Upskilling Engine** that replaces keyword-matching with deep Bayesian inference. It maps your current skill possession to market requirements, identifies implicit gaps via graph reasoning, and optimizes your learning path through Pareto-frontier scheduling.
 
-| Layer | Technology |
-|-------|-----------|
-| **Frontend** | React + Vite + Tailwind CSS |
-| **Backend** | Node.js + Express + MongoDB (Mongoose) |
-| **Auth** | JWT + bcrypt |
-| **ML Engine** | Python 3.10+ · asyncio · probabilistic inference |
-| **ML (HTTP mode)** | Flask + flask-cors *(optional)* |
+---
 
-## ML Engine Architecture
+## 🚀 The v3 ML Engine: 12-Stage Inference Pipeline
 
-The `ml/` directory contains a custom **Probabilistic Skill Intelligence Engine** — not a keyword matcher, but a 5-stage inference pipeline:
+Unlike traditional ATS systems, SkillForge treats resume text as **probabilistic evidence** for latent skill variables.
 
-```
-Resume Text + JD Text
-        │
-        ▼
-┌─────────────────────────────────────────────────────────┐
-│ Stage 1 — Bayesian Skill Extractor                      │
-│  Direct alias matching + 30+ implication rules          │
-│  "built attention mechanism" → P(deep_learning)=0.95    │
-│  Temporal decay: mentions from 2019 get lower confidence│
-└───────────────────────┬─────────────────────────────────┘
-                        │ {skill: confidence} dicts
-                        ▼
-┌─────────────────────────────────────────────────────────┐
-│ Stage 2 — Probabilistic Skill Comparator                │
-│  Matched ≥ 0.55, Soft match 0.25–0.55, Gap < 0.25      │
-└───────────────────────┬─────────────────────────────────┘
-                        │ raw + soft gaps
-                        ▼
-┌─────────────────────────────────────────────────────────┐
-│ Stage 3 — Graph Reasoner (BFS over prereq DAG)          │
-│  Surfaces implicit gaps: "you can't learn PyTorch       │
-│   without Python" — flags it as blocking                │
-│  Assigns priority: critical / high / medium / low       │
-└───────────────────────┬─────────────────────────────────┘
-                        │ enriched gap list
-                        ▼
-┌─────────────────────────────────────────────────────────┐
-│ Stage 4 — Dijkstra Learning Path Planner                │
-│  Minimum-hours path from current skills → job-ready     │
-│  Dependency-ordered schedule with curated resources     │
-└───────────────────────┬─────────────────────────────────┘
-                        │ weekly learning plan
-                        ▼
-┌─────────────────────────────────────────────────────────┐
-│ Stage 5 — Readiness Probability Model                   │
-│  P(hire_ready | current state) as a % score             │
-│  Weekly forecast: "80% ready by week 14"                │
-└─────────────────────────────────────────────────────────┘
+```mermaid
+graph TD
+    A[Resume + JD Text] --> B[Stage 1: Bayesian Extractor]
+    B --> C[Stage 2: Probabilistic Matcher]
+    C --> D[Stage 3: Graph Reasoner]
+    D --> E[Stage 4: Dijkstra Path Planner]
+    E --> F[Stage 5: Readiness Model]
+    F --> G[Stage 6: Transfer Accelerator]
+    G --> H[Stage 7: Market Pulse Analytics]
+    H --> I[Stage 8: Pareto Optimizer]
+    I --> J[Stage 9: Applicant Simulator]
+    J --> K[Stage 10: Interview Ladder]
+    K --> L[Stage 11: Decay Forecaster]
+    L --> M[Stage 12: Counterfactual Analysis]
 ```
 
-Results are streamed stage-by-stage via **Server-Sent Events (SSE)** — the frontend renders progressively as each stage completes.
+### 🧠 Key Innovations
 
-### Daemon Architecture
+| Stage | Innovation | Impact |
+|:---:|:---|:---|
+| **1** | **Bayesian Inference** | 300+ implication rules. Inferred "Attention Mechanisms" → P(Deep Learning)=0.95. |
+| **6** | **Transfer Learning** | Recognizes core skill overlaps. Knowing PyTorch reduces JAX learning hours by 65%. |
+| **8** | **Pareto Optimizer** | Generates 4 schedules (Sprint, Market-Optimal, Salary-Max, Balanced) based on goals. |
+| **9** | **Cohort Simulator** | Monte Carlo simulation (N=2,000) comparing you against rival candidates. |
+| **10** | **Interview Ladder** | Predicts pass probabilities for ATS, Phone Screen, Technical, and System Design. |
+| **12** | **Keystone Analysis** | Identifies the *single* most impactful skill to learn next for maximum ROI. |
 
+---
+
+## 🏗 System Architecture
+
+SkillForge uses a **Hybrid Warm-Process Architecture** to ensure zero-latency inference.
+
+```mermaid
+sequenceDiagram
+    participant UI as React Dashboard
+    participant API as Node.js Backend
+    participant D as Python ML Daemon {Warm}
+    
+    UI->>API: POST /api/analyze (resume + jd)
+    API->>D: TCP/Unix Socket Request
+    loop 12 Stages
+        D-->>API: Streamed progress chunk (SSE)
+        API-->>UI: Real-time UI updates
+    end
+    D->>API: Final analysis payload
+    API->>UI: Result Ready
 ```
-React UI  ←─── SSE stream ───  Express /api/analyze
-                                       │
-                               Unix socket (Linux/Mac)
-                               TCP 127.0.0.1:8001 (Windows)
-                                       │
-                               ml/daemon.py  ← stays warm
-                               (asyncio, LRU-256 cache)
-```
 
-The Python daemon starts once and is reused across requests — zero cold-start per analysis.
+*The Python engine stays warm in memory, leveraging an **LRU-256 Cache** for instant repeat analysis.*
 
-## Project Structure
+---
+
+## 🛠 Tech Stack
+
+- **Frontend:** React 18, Vite, Tailwind CSS (Glassmorphism design)
+- **Backend:** Node.js, Express, MongoDB, SSE (Server-Sent Events)
+- **ML Engine:** Python 3.10+, `asyncio`, `math`, `heapq` (Minimalist & High-performance)
+- **Transport:** Unix domain sockets (Linux/Mac) or TCP (Windows)
+
+---
+
+## 📦 Project Structure
 
 ```text
 SkillForge-AI/
-  backend/
-    controllers/        # analyzeController.js, authController.js
-    models/             # Mongoose schemas (Result, Analysis)
-    routes/             # analyze.js (SSE + daemon bridge), auth.js, results.js
-    utils/              # auth.js (JWT middleware), parser.js, skills.js
-    server.js
-  frontend/             # React + Vite app
-  ml/
-    skill_gap_model.py  # Full ML engine (SkillForgeEngine + all stages)
-    daemon.py           # Async streaming daemon server
+├── backend/            # Express.js API & MongoDB Integration
+├── frontend/           # React Dashboard & Interactive Path UI
+└── ml/
+    ├── skill_gap_model.py # Core 12-stage inference engine
+    └── daemon.py          # Persistent async daemon server
 ```
 
-## Prerequisites
+---
 
+## ⚡ Setup & Installation
+
+### 1) Prerequisites
 - Node.js 18+
-- npm 9+
 - Python 3.10+
-- MongoDB Atlas connection string (or local MongoDB)
+- MongoDB (Atlas or Local)
 
-## 1) Install Dependencies
-
+### 2) Installation
 ```bash
-# Node dependencies
-cd backend && npm install
+# Clone the repository
+git clone https://github.com/arushihsura/SkillForge-AI
+
+# Install Node dependencies
+cd SkillForge-AI/backend && npm install
 cd ../frontend && npm install
 
-# Python ML dependencies (minimal — no heavy ML frameworks required)
-pip install flask flask-cors   # only needed for --serve (HTTP) mode
+# Install optional Python helpers
+pip install flask flask-cors
 ```
 
-> The daemon's core engine (`skill_gap_model.py`) uses only Python standard library modules (`re`, `math`, `json`, `heapq`, `asyncio`, `collections`). No PyTorch/TensorFlow required.
-
-## 2) Configure Environment Variables
-
-Create `backend/.env`:
-
+### 3) Configuration (`backend/.env`)
 ```env
-MONGO_URI=your_mongodb_connection_string
-JWT_SECRET=your_strong_random_secret
-PORT=5000
+MONGO_URI=your_mongodb_uri
+JWT_SECRET=your_jwt_secret
+SF_MODE=tcp   # WINDOWS: tcp, LINUX/MAC: unix
 ```
 
-### ML Environment Variables (optional overrides)
+### 4) Running the App
+For the best experience, run in separate terminals:
+- **Backend:** `cd backend && npm run dev`
+- **Frontend:** `cd frontend && npm run dev`
+- **ML Engine:** `python ml/daemon.py --tcp 8001` (Windows)
 
-```env
-# Transport mode: "unix" (default, Linux/Mac) or "tcp" (Windows-friendly)
-SF_MODE=tcp
+---
 
-# Socket path (unix mode only)
-SF_SOCKET=/tmp/skillforge.sock
+## 👥 Meet the Team & IISc Hack
+Developed for the **IISc Hackathon**, SkillForge AI aims to democratize career intelligence.
 
-# TCP settings (tcp mode only)
-SF_TCP_HOST=127.0.0.1
-SF_TCP_PORT=8001
+> [!TIP]
+> **Pro Tip:** Use the "Pareto Balanced" schedule if you're looking for the best mix of salary growth and learning efficiency.
 
-# Absolute path to daemon.py (auto-detected by default)
-ML_DAEMON_PATH=/absolute/path/to/ml/daemon.py
-
-# Analysis timeout in ms (default 120000)
-SF_TIMEOUT_MS=120000
-```
-
-> **Windows users:** Set `SF_MODE=tcp` in `backend/.env`. Unix sockets are not supported on Windows.
-
-## 3) Run the App (Development)
-
-Open **three** terminals.
-
-**Terminal A — Backend (Node.js):**
-```bash
-cd backend
-npm run dev
-```
-
-**Terminal B — Frontend (React):**
-```bash
-cd frontend
-npm run dev
-```
-
-**Terminal C — ML Daemon (Python):**
-```bash
-# TCP mode (Windows / cross-platform)
-python ml/daemon.py --tcp 8001
-
-# Unix socket mode (Linux / Mac — default)
-python ml/daemon.py
-
-# Single-shot stdin mode (debug / fallback — no persistent daemon)
-echo '{"resumeText":"...","jobDescription":"...","hoursPerWeek":10}' | python ml/daemon.py --stdin
-```
-
-> The Node.js backend **auto-starts** the daemon on the first `/api/analyze` request if it's not already running. You only need Terminal C during development for faster startup or independent testing.
-
-**Access the app:**
-- Frontend: `http://localhost:5173`
-- Backend API: `http://localhost:5000`
-- ML daemon health: `http://localhost:5000/api/analyze/health`
-
-## Available Scripts
-
-### Backend
-```bash
-npm run start   # production
-npm run dev     # nodemon dev server
-```
-
-### Frontend
-```bash
-npm run dev
-npm run build
-npm run preview
-npm run lint
-```
-
-### ML Engine (standalone)
-```bash
-# Self-test with built-in sample resume + JD
-python ml/skill_gap_model.py
-
-# HTTP server mode (exposes /ml/analyze and /ml/health)
-python ml/skill_gap_model.py --serve 8001
-
-# Persistent async daemon (TCP)
-python ml/daemon.py --tcp 8001
-```
-
-## Core Features
-
-- Premium landing page UI with animated components
-- Login/Signup authentication (JWT)
-- Dashboard, History, Profile pages
-- Resume + Job Description upload flow
-- AI analysis loading screen with live stage progress (SSE)
-- Results dashboard:
-  - Skill comparison (matched / soft-matched / gap)
-  - Skill gap KPIs with priority breakdown (critical / high / medium)
-  - Dependency-optimal learning path timeline with curated resources
-  - Hire-readiness probability curve (weekly forecast)
-  - Reasoning trace (5-stage audit log)
-  - Download / Save actions
-
-## API Endpoints
-
-| Method | Endpoint | Description |
-|--------|---------|-------------|
-| `POST` | `/api/auth/signup` | Register a new user |
-| `POST` | `/api/auth/login` | Login and receive JWT |
-| `POST` | `/api/analyze` | Run skill gap analysis (SSE or JSON) |
-| `GET`  | `/api/analyze/health` | Daemon status + PID |
-| `GET`  | `/api/results/:id` | Fetch saved analysis by ID |
-
-### POST /api/analyze
-
-**Request headers:**
-- `Accept: text/event-stream` → streamed SSE response (recommended)
-- `Accept: application/json` → blocking JSON response (fallback)
-
-**Request body:**
-```json
-{
-  "resumeText": "...",
-  "jobDescription": "...",
-  "hoursPerWeek": 10
-}
-```
-
-**SSE event stream:**
-```
-event: connected   → { requestId }
-event: stage       → { stage: 1..4, label, data, ms }
-event: complete    → { id, matchedSkills, missingSkills, learningPath, readiness, kpis, ... }
-event: done        → {}
-```
-
-## Troubleshooting
-
-### ML Daemon won't start
-
-1. Verify Python 3.10+ is installed: `python --version`
-2. Ensure `ml/skill_gap_model.py` exists (the daemon imports from it)
-3. On Windows, make sure `SF_MODE=tcp` is set in `backend/.env`
-4. Check the daemon manually: `python ml/daemon.py --tcp 8001`
-5. Look for Python import errors in the backend console (stderr is now logged for tracebacks and errors)
-
-### "ML service unavailable" error on /api/analyze
-
-- The daemon failed to start within 6 seconds
-- Check backend console for `[daemon]` error lines
-- Try starting the daemon manually (Terminal C above) and retry
-
-### Frontend `npm run dev` exits with code 1
-
-1. Run `npm install` in `frontend/`
-2. Ensure backend is running on port 5000
-3. Check if port 5173 is already in use
-4. Verify build syntax: `npm run build`
-
-### MongoDB connection errors
-
-- Verify `MONGO_URI` in `backend/.env`
-- Ensure your IP is allowed in MongoDB Atlas Network Access
-- Ensure DB user credentials are valid
-
-## Security Notes
-
-- **Never** commit real credentials to GitHub
-- Keep `backend/.env` private (already in `.gitignore`)
-- Set a strong `JWT_SECRET` environment variable — the `"secret"` fallback is for local development only; **it must be overridden in production**
-- The ML daemon binds to `127.0.0.1` only (not publicly accessible)
-
-## Demo Flow
-
-1. Open landing page → Login or Sign Up
-2. Start new analysis
-3. Upload resume text + job description
-4. Watch real-time stage progress (SSE)
-5. View generated results: skill comparison, gap KPIs, learning path, readiness curve
-6. Save analysis and review in History
+---
+*Built with ❤️ at IISc. SkillForge AI is an open-source project.*

@@ -38,8 +38,11 @@ const SF_SOCKET      = process.env.SF_SOCKET      || "/tmp/skillforge.sock";
 const SF_TCP_HOST    = process.env.SF_TCP_HOST    || "127.0.0.1";
 const SF_TCP_PORT    = parseInt(process.env.SF_TCP_PORT || "8001");
 const DAEMON_SCRIPT  = process.env.ML_DAEMON_PATH ||
-  path.resolve(__dirname, "../../ml/daemon.py");
+  path.resolve(__dirname, "../../ml/skill_gap_model.py");
 const STREAM_TIMEOUT = parseInt(process.env.SF_TIMEOUT_MS || "120000");
+
+// ── Vercel / Serverless Detection ───────────────────────────────────────────
+const IS_SERVERLESS = SF_MODE === "serverless" || !!process.env.VERCEL;
 
 // ── Daemon lifecycle ─────────────────────────────────────────────────────────
 let _proc    = null;
@@ -47,6 +50,7 @@ let _ready   = false;
 let _starting = false;
 
 async function ensureDaemon() {
+  if (IS_SERVERLESS) return; // No persistent daemon in serverless mode
   if (_ready) return;
   if (_starting) {
     return new Promise((res) => {
@@ -117,6 +121,34 @@ function makeDaemonSocket() {
  * Resolves with the final "complete" data.
  */
 function queryDaemon(payload, onStage) {
+  if (IS_SERVERLESS) {
+    return new Promise((resolve, reject) => {
+      let done = false;
+      const py = spawn("python3", [DAEMON_SCRIPT, "--stdin"], {
+        env: { ...process.env, PYTHONUNBUFFERED: "1" }
+      });
+
+      py.stdout.on("data", (chunk) => {
+        const lines = chunk.toString().split("\n");
+        for (const line of lines) {
+          if (!line.trim()) continue;
+          let msg;
+          try { msg = JSON.parse(line); } catch { continue; }
+          
+          if      (msg.event === "stage"    ) { onStage?.(msg); }
+          else if (msg.event === "complete" ) { if (!done) { done = true; resolve(msg.data); } }
+          else if (msg.event === "error"    ) { if (!done) { done = true; reject(new Error(msg.error)); } }
+        }
+      });
+
+      py.stderr.on("data", (d) => console.error("[ml-serverless]", d.toString()));
+      py.on("error", (e) => reject(e));
+      
+      py.stdin.write(JSON.stringify(payload) + "\n");
+      py.stdin.end();
+    });
+  }
+
   return new Promise((resolve, reject) => {
     const sock = makeDaemonSocket();
     let buf = "", done = false;
