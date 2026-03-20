@@ -1,4 +1,4 @@
-# SkillForge AI — Probabilistic Skill Intelligence (v3)
+# SkillForge AI
 
 [![IISc Hackathon](https://img.shields.io/badge/IISc_Hack-2026-blueviolet)](https://github.com/arushihsura/SkillForge-AI)
 [![Version](https://img.shields.io/badge/Version-3.0.0-emerald)](https://github.com/arushihsura/SkillForge-AI)
@@ -124,9 +124,10 @@ For the best experience, run in separate terminals:
 
 ## 👥 Meet the Team & IISc Hack
 Developed for the **IISc Hackathon**, SkillForge AI aims to democratize career intelligence.
+Team Members: Arushi Tiwari, Hridaya Vashishtha, Aarya Patankar and Shivani Bhat
 
 > [!TIP]
 > **Pro Tip:** Use the "Pareto Balanced" schedule if you're looking for the best mix of salary growth and learning efficiency.
 
 ---
-*Built with ❤️ at IISc. SkillForge AI is an open-source project.*
+*Built with ❤️ by Team Byteworks. SkillForge AI is an open-source project.*
