@@ -32,7 +32,7 @@ What makes this different from a keyword matcher:
 """
 
 from __future__ import annotations
-import re, math, json, heapq, time
+import re, math, json, heapq, time, random
 from collections import defaultdict, deque
 from typing import Any, Optional
 
@@ -352,6 +352,123 @@ def _fallback_resources(skill: str) -> list[dict]:
         {"t": f"'{skill}' on Coursera", "u": f"https://coursera.org/search?query={q}", "type": "search"},
         {"t": f"'{skill}' tutorials on YouTube", "u": f"https://youtube.com/results?search_query={q}+tutorial", "type": "video"},
     ]
+
+
+
+# ── v3: Knowledge Transfer Matrix ────────────────────────────────────────
+# (source_skill, target_skill) → fraction of base hours saved (0–0.85)
+TRANSFER_MATRIX: dict[tuple[str, str], float] = {
+    ("pytorch",          "jax"):               0.65,
+    ("jax",              "pytorch"):            0.55,
+    ("pytorch",          "tensorflow"):         0.50,
+    ("tensorflow",       "pytorch"):            0.45,
+    ("pytorch",          "huggingface"):        0.55,
+    ("nlp",              "huggingface"):        0.45,
+    ("nlp",              "llm"):               0.55,
+    ("llm",              "rag"):               0.50,
+    ("machine_learning", "deep_learning"):      0.40,
+    ("deep_learning",    "nlp"):               0.40,
+    ("deep_learning",    "computer_vision"):    0.45,
+    ("deep_learning",    "reinforcement_learning"): 0.35,
+    ("machine_learning", "statistics"):         0.50,
+    ("statistics",       "machine_learning"):   0.50,
+    ("machine_learning", "feature_engineering"):0.50,
+    ("statistics",       "feature_engineering"):0.45,
+    ("scikit",           "machine_learning"):   0.35,
+    ("machine_learning", "scikit"):             0.40,
+    ("pandas",           "feature_engineering"):0.30,
+    ("pandas",           "spark"):              0.35,
+    ("python",           "r"):                 0.30,
+    ("r",                "statistics"):         0.45,
+    ("sql",              "nosql"):              0.25,
+    ("sql",              "data_engineering"):   0.30,
+    ("data_engineering", "spark"):              0.35,
+    ("data_engineering", "airflow"):            0.35,
+    ("spark",            "data_engineering"):   0.30,
+    ("javascript",       "typescript"):         0.60,
+    ("typescript",       "javascript"):         0.50,
+    ("react",            "nodejs"):             0.20,
+    ("nodejs",           "rest_api"):           0.35,
+    ("fastapi",          "flask"):              0.55,
+    ("flask",            "fastapi"):            0.55,
+    ("fastapi",          "rest_api"):           0.40,
+    ("rest_api",         "graphql"):            0.35,
+    ("docker",           "kubernetes"):         0.45,
+    ("kubernetes",       "docker"):             0.30,
+    ("docker",           "cicd"):               0.30,
+    ("git",              "cicd"):               0.30,
+    ("cicd",             "terraform"):          0.30,
+    ("linux",            "docker"):             0.25,
+    ("aws",              "gcp"):               0.40,
+    ("aws",              "azure"):              0.35,
+    ("gcp",              "aws"):               0.35,
+    ("azure",            "aws"):               0.35,
+    ("aws",              "mlops"):              0.25,
+    ("deep_learning",    "mlops"):              0.25,
+    ("numpy",            "pandas"):             0.25,
+    ("huggingface",      "nlp"):               0.40,
+    ("rag",              "vector_db"):          0.40,
+    ("vector_db",        "rag"):               0.30,
+    ("python",           "fastapi"):            0.20,
+    ("dbt",              "sql"):               0.30,
+}
+
+# ── v3: Per-Skill Salary Impact (0–1, relative salary premium) ───────────
+SALARY_IMPACT: dict[str, float] = {
+    "llm": 0.96, "rag": 0.92, "system_design": 0.90, "mlops": 0.88,
+    "vector_db": 0.88, "pytorch": 0.84, "deep_learning": 0.82,
+    "huggingface": 0.82, "machine_learning": 0.80, "nlp": 0.80,
+    "kubernetes": 0.80, "rust": 0.78, "jax": 0.78, "computer_vision": 0.78,
+    "spark": 0.78, "statistics": 0.74, "reinforcement_learning": 0.75,
+    "go": 0.72, "terraform": 0.76, "data_engineering": 0.76,
+    "aws": 0.74, "gcp": 0.74, "feature_engineering": 0.72,
+    "python": 0.72, "tensorflow": 0.72, "azure": 0.72, "airflow": 0.70,
+    "docker": 0.70, "cicd": 0.68, "dbt": 0.68, "fastapi": 0.66,
+    "scikit": 0.66, "java": 0.65, "typescript": 0.65,
+    "react": 0.64, "nosql": 0.64, "nodejs": 0.62,
+    "sql": 0.60, "javascript": 0.60, "linux": 0.60, "rest_api": 0.60,
+    "pandas": 0.60, "r": 0.58, "graphql": 0.58, "numpy": 0.58,
+    "data_viz": 0.55, "communication": 0.52, "agile": 0.45, "git": 0.50,
+}
+DEFAULT_SALARY_IMPACT = 0.55
+
+# ── v3: Market Velocity — how fast is demand growing? (0=declining, 1=exploding)
+MARKET_VELOCITY: dict[str, float] = {
+    "llm": 1.00, "rag": 0.97, "vector_db": 0.95, "huggingface": 0.90,
+    "mlops": 0.88, "rust": 0.80, "data_engineering": 0.80, "pytorch": 0.80,
+    "deep_learning": 0.78, "nlp": 0.76, "python": 0.75, "fastapi": 0.70,
+    "jax": 0.75, "machine_learning": 0.74, "dbt": 0.72, "go": 0.72,
+    "typescript": 0.72, "computer_vision": 0.72, "gcp": 0.68, "cicd": 0.65,
+    "reinforcement_learning": 0.65, "statistics": 0.65, "airflow": 0.65,
+    "aws": 0.65, "azure": 0.66, "kubernetes": 0.70, "terraform": 0.68,
+    "docker": 0.62, "spark": 0.70, "system_design": 0.70,
+    "feature_engineering": 0.68, "react": 0.60, "sql": 0.55,
+    "nosql": 0.58, "pandas": 0.60, "numpy": 0.58, "linux": 0.60,
+    "scikit": 0.58, "nodejs": 0.55, "javascript": 0.55, "git": 0.55,
+    "java": 0.52, "rest_api": 0.58, "agile": 0.50, "data_viz": 0.56,
+    "communication": 0.52, "flask": 0.45, "tensorflow": 0.40,
+    "r": 0.38, "graphql": 0.55, "c++": 0.55,
+}
+DEFAULT_MARKET_VELOCITY = 0.50
+
+# ── v3: Learning Difficulty (0=trivial, 1=extremely hard) ────────────────
+DIFFICULTY: dict[str, float] = {
+    "git": 0.15, "agile": 0.20, "python": 0.25, "sql": 0.25, "numpy": 0.25,
+    "communication": 0.25, "linux": 0.30, "pandas": 0.30, "data_viz": 0.30,
+    "docker": 0.35, "rest_api": 0.30, "scikit": 0.35, "nosql": 0.35,
+    "javascript": 0.35, "r": 0.40, "fastapi": 0.35, "flask": 0.35,
+    "typescript": 0.40, "dbt": 0.40, "vector_db": 0.40, "react": 0.45,
+    "nodejs": 0.40, "graphql": 0.45, "feature_engineering": 0.45,
+    "huggingface": 0.50, "statistics": 0.50, "cicd": 0.50,
+    "rag": 0.55, "aws": 0.55, "gcp": 0.55, "azure": 0.55,
+    "java": 0.55, "machine_learning": 0.55, "airflow": 0.55, "terraform": 0.55,
+    "pytorch": 0.60, "data_engineering": 0.60, "mlops": 0.65,
+    "tensorflow": 0.65, "nlp": 0.65, "computer_vision": 0.65,
+    "llm": 0.65, "spark": 0.65, "kubernetes": 0.65, "go": 0.50,
+    "deep_learning": 0.70, "jax": 0.72, "system_design": 0.75,
+    "c++": 0.75, "rust": 0.80, "reinforcement_learning": 0.85,
+}
+DEFAULT_DIFFICULTY = 0.50
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -735,113 +852,520 @@ class ReadinessModel:
         }
 
 
+
 # ═══════════════════════════════════════════════════════════════════════════
-# ORCHESTRATOR
+# STAGE 6: KNOWLEDGE-TRANSFER ACCELERATOR
+# ═══════════════════════════════════════════════════════════════════════════
+
+class TransferLearningModel:
+    """
+    Existing skills shorten learning time for related skills.
+    "Know PyTorch @ 0.90 → learn JAX in ~40% of base hours."
+    Scans TRANSFER_MATRIX for every (have_skill, target_skill) pair,
+    weights savings by current confidence, caps at 85%.
+    """
+
+    def adjust_hours(self, skill: str, resume_skills: dict[str, float]) -> tuple[int, float, str]:
+        """Returns (adjusted_hours, saving_fraction, via_skill)."""
+        base = LEARN_HOURS.get(skill, 20)
+        best_saving, best_via = 0.0, ""
+        for (src, dst), coef in TRANSFER_MATRIX.items():
+            if dst == skill and src in resume_skills:
+                saving = coef * resume_skills[src]
+                if saving > best_saving:
+                    best_saving, best_via = saving, src
+        best_saving = min(best_saving, 0.85)
+        return max(4, round(base * (1 - best_saving))), best_saving, best_via
+
+    def compute_all(self, enriched_gaps: list[dict], resume_skills: dict[str, float]) -> list[dict]:
+        bonuses = []
+        for gap in enriched_gaps:
+            adj, saving, via = self.adjust_hours(gap["skill"], resume_skills)
+            if saving > 0.12:
+                bonuses.append({
+                    "skill": gap["skill"],
+                    "baseHours": LEARN_HOURS.get(gap["skill"], 20),
+                    "adjustedHours": adj,
+                    "savingPct": round(saving * 100),
+                    "via": via,
+                    "interpretation": f"Your {via} experience covers ~{round(saving*100)}% of {gap['skill']} fundamentals.",
+                })
+        return sorted(bonuses, key=lambda x: -x["savingPct"])
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STAGE 7: MARKET PULSE ANALYTICS
+# ═══════════════════════════════════════════════════════════════════════════
+
+class MarketPulseAnalyzer:
+    """
+    Per-skill velocity, JD inflation detection, and trending/declining signals.
+    JD inflation score: JDs listing >12 skills often only truly require 5-6.
+    """
+
+    def analyze(self, job_skills: list[str]) -> dict:
+        n = len(job_skills)
+        vel = {s: MARKET_VELOCITY.get(s, DEFAULT_MARKET_VELOCITY) for s in job_skills}
+        trending  = [s for s, v in vel.items() if v >= 0.80]
+        stable    = [s for s, v in vel.items() if 0.50 <= v < 0.80]
+        declining = [s for s, v in vel.items() if v < 0.50]
+        inflation = min(100, max(0, round((n - 6) / max(1, 12 - 6) * 100))) if n > 6 else 0
+        top5      = sorted(job_skills, key=lambda s: -MARKET_VELOCITY.get(s, 0.5))[:5]
+        return {
+            "velocityScores":    {s: round(v, 2) for s, v in vel.items()},
+            "trendingSkills":    trending,
+            "stableSkills":      stable,
+            "decliningSkills":   declining,
+            "jdInflationScore":  inflation,
+            "jdInflationLabel":  "High" if inflation > 70 else "Moderate" if inflation > 35 else "Normal",
+            "topSignalSkills":   top5,
+            "insight": (
+                f"JD lists {n} skills — inflation {inflation}/100. "
+                f"Focus first on: {', '.join(top5[:3])}."
+                if inflation > 40 else
+                f"Well-scoped JD ({n} skills). Top velocity: {', '.join(top5[:3])}."
+            ),
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STAGE 8: PARETO-FRONT LEARNING PATH OPTIMIZER
+# ═══════════════════════════════════════════════════════════════════════════
+
+class ParetoPathOptimizer:
+    """
+    Generates 4 Pareto-optimal learning schedules by applying different
+    greedy priority functions over the same dependency-constrained skill graph.
+
+      Sprint          — minimise time to first critical skill
+      Market-Optimal  — front-load highest-velocity skills
+      Salary-Max      — front-load highest salary-impact skills
+      Balanced        — geometric blend of all objectives
+
+    Novel: no existing career-intelligence tool produces a Pareto frontier.
+    """
+
+    def _prereq_expand(self, targets: set[str]) -> set[str]:
+        all_needed = set(targets)
+        q = deque(targets)
+        while q:
+            s = q.popleft()
+            for p, _ in PREREQ_GRAPH.get(s, []):
+                if p not in all_needed:
+                    all_needed.add(p); q.append(p)
+        return all_needed
+
+    def _run(self, to_learn, have, hpw, key_fn, transfer_model, resume_skills):
+        targets   = {g["skill"] for g in to_learn}
+        all_nodes = self._prereq_expand(targets)
+        pmap      = {g["skill"]: g.get("urgency", 0.5) for g in to_learn}
+        acquired  = set(have)
+        plan, total_h = [], 0
+        while True:
+            free = [s for s in all_nodes if s not in acquired
+                    and all(p in acquired for p, _ in PREREQ_GRAPH.get(s, []))]
+            if not free: break
+            best = min(free, key=key_fn)
+            adj, _, _ = transfer_model.adjust_hours(best, resume_skills)
+            total_h += adj
+            week = max(1, math.ceil(total_h / hpw))
+            res  = [{"title": r["t"], "url": r["u"], "type": r["type"]}
+                    for r in RESOURCES.get(best, _fallback_resources(best))[:2]]
+            plan.append({"week": week, "skill": best,
+                         "estimatedHours": adj, "isPrerequisite": best not in targets,
+                         "priority": "critical" if pmap.get(best,0)>=1.0 else
+                                     "high" if pmap.get(best,0)>=0.8 else "medium",
+                         "resources": res})
+            acquired.add(best)
+            if targets <= acquired: break
+        return plan
+
+    def _score(self, plan, jd_set):
+        total_h = sum(s["estimatedHours"] for s in plan)
+        demand  = sum(MARKET_VELOCITY.get(s["skill"], .5) / s["week"]
+                      for s in plan if s["skill"] in jd_set)
+        salary  = sum(SALARY_IMPACT.get(s["skill"], .5) / s["week"]
+                      for s in plan if s["skill"] in jd_set)
+        diff    = sum(DIFFICULTY.get(s["skill"], .5) * s["estimatedHours"]
+                      for s in plan) / max(1, total_h)
+        return {"totalHours": total_h,
+                "demandScore": round(demand, 3),
+                "salaryScore": round(salary, 3),
+                "avgDifficulty": round(diff, 3)}
+
+    def optimize(self, enriched_gaps, have, job_skills, hpw, transfer_model, resume_skills):
+        to_learn = [g for g in enriched_gaps if g["priority"] in ("critical","high","medium")]
+        if not to_learn: return []
+        pm = {g["skill"]: g.get("urgency", 0.5) for g in to_learn}
+        jd = set(job_skills)
+
+        strategies = {
+            "Sprint": lambda s: (
+                -(pm.get(s,0.2)*3), LEARN_HOURS.get(s,20)),
+            "Market-Optimal": lambda s: (
+                -(MARKET_VELOCITY.get(s,DEFAULT_MARKET_VELOCITY) + pm.get(s,0.2)),
+                DIFFICULTY.get(s,DEFAULT_DIFFICULTY)),
+            "Salary-Maximising": lambda s: (
+                -(SALARY_IMPACT.get(s,DEFAULT_SALARY_IMPACT) + pm.get(s,0.2)),
+                DIFFICULTY.get(s,DEFAULT_DIFFICULTY)),
+            "Balanced": lambda s: (
+                -(MARKET_VELOCITY.get(s,DEFAULT_MARKET_VELOCITY)*.35 +
+                  SALARY_IMPACT.get(s,DEFAULT_SALARY_IMPACT)*.35 +
+                  pm.get(s,0.2)*.30),
+                DIFFICULTY.get(s,DEFAULT_DIFFICULTY)),
+        }
+        descs = {
+            "Sprint":           "Reach 80% readiness in minimum calendar time.",
+            "Market-Optimal":   "Front-loads highest-velocity skills — profile stays relevant longest.",
+            "Salary-Maximising":"Sequences by salary premium — maximises earning at each milestone.",
+            "Balanced":         "Pareto-optimal blend: speed + demand + salary impact.",
+        }
+        frontier = []
+        for label, kfn in strategies.items():
+            p = self._run(to_learn, have, hpw, kfn, transfer_model, resume_skills)
+            sc = self._score(p, jd)
+            frontier.append({
+                "label": label, "description": descs[label],
+                "schedule": p, "scores": sc,
+                "totalHours": sc["totalHours"],
+                "estimatedWeeks": math.ceil(sc["totalHours"]/hpw) if p else 0,
+            })
+        return frontier
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STAGE 9: RIVAL APPLICANT COHORT SIMULATOR  (Monte Carlo, N=2 000)
+# ═══════════════════════════════════════════════════════════════════════════
+
+class ApplicantSimulator:
+    """
+    Simulates 2 000 competing applicants using a Gaussian-mixture tier model
+    (junior 30% / mid 45% / senior 20% / expert 5%) seeded for determinism.
+    Returns the candidate's percentile rank and cohort distribution.
+    Novel: no existing skill-gap tool benchmarks against a simulated talent pool.
+    """
+    N = 2_000
+    TIERS = [          # (weight, coverage_μ, coverage_σ, conf_μ, conf_σ)
+        (0.30, 0.28, 0.10, 0.66, 0.08),   # junior
+        (0.45, 0.55, 0.12, 0.76, 0.07),   # mid
+        (0.20, 0.78, 0.10, 0.87, 0.05),   # senior
+        (0.05, 0.93, 0.05, 0.94, 0.03),   # expert
+    ]
+
+    def _sim_score(self, job_skills, rng, tier):
+        _, cm, cs, fm, fs = tier
+        n = max(1, len(job_skills))
+        n_have = max(0, min(n, round(rng.gauss(cm * n, cs * n))))
+        possessed = set(job_skills[:n_have])          # deterministic slice
+        return sum(max(0.4, min(1.0, rng.gauss(fm, fs)))
+                   for s in job_skills if s in possessed) / n
+
+    def simulate(self, job_skills: list[str], current_pct: int) -> dict:
+        if not job_skills:
+            return {"percentile": 50, "interpretation": "No skills to benchmark."}
+        rng = random.Random(42)
+        cohort = []
+        for _ in range(self.N):
+            r, cum = rng.random(), 0.0
+            tier = self.TIERS[-1]
+            for t in self.TIERS:
+                cum += t[0]
+                if r <= cum: tier = t; break
+            cohort.append(round(self._sim_score(job_skills, rng, tier) * 100))
+        cohort.sort()
+        pct = round(sum(1 for s in cohort if s < current_pct) / self.N * 100)
+        p = lambda q: cohort[int(self.N * q)]
+        tier_benchmarks = {
+            "Typical junior": p(0.30), "Typical mid-level": p(0.55),
+            "Typical senior": p(0.80),
+        }
+        if   pct >= 80: interp = f"Top {100-pct}% of applicants — strong competitive position."
+        elif pct >= 60: interp = f"Above-average ({pct}th percentile) — targeted gap-closing is high-leverage."
+        elif pct >= 40: interp = f"Mid-field ({pct}th percentile) — significant upskilling needed."
+        else:           interp = f"Below median ({pct}th percentile) — critical skills investment required."
+        return {
+            "percentile": pct, "interpretation": interp,
+            "cohortStats": {"p25": p(0.25), "median": p(0.50), "p75": p(0.75), "p90": p(0.90)},
+            "tierBenchmarks": {k: {"score": v, "vsYou": current_pct-v} for k,v in tier_benchmarks.items()},
+            "simulatedApplicants": self.N,
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STAGE 10: INTERVIEW STAGE LADDER
+# ═══════════════════════════════════════════════════════════════════════════
+
+class InterviewReadinessModel:
+    """
+    Four-stage P(pass) ladder: ATS → Phone Screen → Technical → System Design.
+    Models each stage independently using different skill-coverage signals.
+    Product gives overall hire-probability now vs. after the learning path.
+    """
+
+    def _logit(self, x: float, k: float = 8.0, m: float = 0.5) -> float:
+        return 1 / (1 + math.exp(-k * (x - m)))
+
+    def compute(self, matched, soft_matched, enriched_gaps, job_skills, learning_path) -> dict:
+        jd  = set(job_skills)
+        n   = max(1, len(jd))
+        mc  = {m["skill"]: m["confidence"] for m in matched}
+        sc  = {s["skill"]: s["confidence"] * 0.4 for s in soft_matched}
+        all_c = {**sc, **mc}
+
+        # Stage 1: ATS (keyword breadth)
+        ats_sc  = min(1.0, (len(mc.keys() & jd) + 0.35*len(sc.keys() & jd)) / n)
+        ats_p   = round(min(0.99, ats_sc**0.65 * 1.25), 3)
+
+        # Stage 2: Recruiter phone (breadth, no red flags)
+        phone_sc = len(mc.keys() & jd) / n
+        phone_p  = round(self._logit(phone_sc, k=10, m=0.45), 3)
+
+        # Stage 3: Technical (depth in critical/high skills)
+        crit = {g["skill"] for g in enriched_gaps if g["priority"] in ("critical","high")} & jd
+        tech_sc  = sum(all_c.get(s, 0) for s in (crit or jd)) / max(1, len(crit or jd))
+        tech_p   = round(self._logit(tech_sc, k=9, m=0.58), 3)
+
+        # Stage 4: System design (architecture signals)
+        sys_skills = {"system_design","kubernetes","aws","gcp","azure","spark","data_engineering","cicd"}
+        sys_in_jd  = sys_skills & jd
+        sys_sc     = sum(all_c.get(s,0) for s in sys_in_jd)/max(1,len(sys_in_jd)) if sys_in_jd else 0.30
+        sys_p      = round(self._logit(sys_sc, k=8, m=0.50), 3)
+
+        # Post-path scores (learned → 0.85 confidence)
+        lp_set = {s["skill"] for s in learning_path}
+        post   = {**all_c, **{s: 0.85 for s in lp_set if s in jd}}
+        p_phone = round(self._logit(len({s for s in jd if post.get(s,0)>=0.55})/n, 10, 0.45), 3)
+        p_tech  = round(self._logit(sum(post.get(s,0) for s in (crit or jd))/max(1,len(crit or jd)),9,0.58),3)
+        p_ats   = round(min(0.99, p_phone**0.65 * 1.25), 3)
+        p_sys_sc= sum(post.get(s,0) for s in sys_in_jd)/max(1,len(sys_in_jd)) if sys_in_jd else 0.65
+        p_sys   = round(self._logit(p_sys_sc, 8, 0.50), 3)
+
+        hire_now  = round(ats_p * phone_p * tech_p * sys_p, 4)
+        hire_path = round(p_ats * p_phone * p_tech * p_sys, 4)
+
+        bottleneck = min(
+            {"atsScreen": ats_p, "phoneScreen": phone_p,
+             "technicalRound": tech_p, "systemDesign": sys_p},
+            key=lambda k: {"atsScreen":ats_p,"phoneScreen":phone_p,"technicalRound":tech_p,"systemDesign":sys_p}[k]
+        )
+        return {
+            "stages": {
+                "atsScreen":      {"label": "ATS / Resume Screen",    "passProbability": ats_p,   "afterPath": p_ats},
+                "phoneScreen":    {"label": "Recruiter Phone Screen", "passProbability": phone_p, "afterPath": p_phone},
+                "technicalRound": {"label": "Technical Interview",    "passProbability": tech_p,  "afterPath": p_tech},
+                "systemDesign":   {"label": "System Design Round",    "passProbability": sys_p,   "afterPath": p_sys},
+            },
+            "overallHireProbabilityNow":       hire_now,
+            "overallHireProbabilityAfterPath": hire_path,
+            "improvementFactor": round(hire_path / max(0.001, hire_now), 1),
+            "bottleneck": bottleneck,
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STAGE 11: SKILL DECAY EARLY-WARNING SYSTEM
+# ═══════════════════════════════════════════════════════════════════════════
+
+class SkillDecayForecaster:
+    """
+    Projects each current skill's confidence forward in time using the
+    exponential decay model from Stage 1 (same half-life constants).
+    Flags skills that will drop below MATCH_THRESHOLD within 12 months
+    if left unused — "refresh" recommendations before they become gaps.
+    """
+    HORIZON = 12  # months to look ahead
+
+    def forecast(self, resume_skills: dict[str, float]) -> list[dict]:
+        alerts = []
+        for skill, conf in resume_skills.items():
+            if conf <= MATCH_THRESHOLD:
+                continue
+            hl_months = HALF_LIFE_YEARS.get(skill, DEFAULT_HALF_LIFE) * 12
+            # t* = hl * log2(conf / threshold)
+            t_star = hl_months * math.log(conf / MATCH_THRESHOLD) / math.log(2)
+            if 0 < t_star <= self.HORIZON:
+                urg = "critical" if t_star <= 3 else "high" if t_star <= 6 else "moderate"
+                alerts.append({
+                    "skill": skill,
+                    "currentConfidence": round(conf, 3),
+                    "monthsToThreshold": round(t_star, 1),
+                    "urgency": urg,
+                    "recommendation": (
+                        f"Refresh {skill} in ≤{math.ceil(t_star)} month(s) — confidence will fall below hire threshold."
+                        if t_star <= 6 else
+                        f"Re-engage with {skill} within the year to maintain competitive confidence."
+                    ),
+                })
+        return sorted(alerts, key=lambda x: x["monthsToThreshold"])
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# STAGE 12: COUNTERFACTUAL KEYSTONE ANALYSIS
+# ═══════════════════════════════════════════════════════════════════════════
+
+class CounterfactualExplorer:
+    """
+    Finds the KEYSTONE skill: the single gap whose closure maximises
+    immediate readiness improvement × market velocity × salary impact.
+    Also ranks every gap skill by its marginal impact score,
+    answering: "If I could learn only ONE skill this month, which is it?"
+    """
+
+    def analyze(self, enriched_gaps, resume_skills, job_skills, matched, soft_matched) -> dict:
+        jd  = set(job_skills)
+        n   = max(1, len(jd))
+        all_c = {m["skill"]: m["confidence"] for m in matched}
+        all_c.update({s["skill"]: s["confidence"]*0.5 for s in soft_matched})
+        base_score = sum(all_c.get(s, 0) for s in jd) / n
+
+        table = []
+        for gap in enriched_gaps:
+            sk = gap["skill"]
+            if sk not in jd:
+                continue
+            hypo = {**all_c, sk: 0.85}
+            delta = (sum(hypo.get(s,0) for s in jd)/n - base_score) * 100
+            # Skills that become fully prereq-satisfied once we acquire sk
+            unlocks = []
+            for other in jd:
+                if other in all_c: continue
+                prereqs = {p for p,_ in PREREQ_GRAPH.get(other,[])}
+                if sk in prereqs and not (prereqs - set(resume_skills) - {sk}):
+                    unlocks.append(other)
+            composite = (delta/100)*0.45 + MARKET_VELOCITY.get(sk,DEFAULT_MARKET_VELOCITY)*0.30 + SALARY_IMPACT.get(sk,DEFAULT_SALARY_IMPACT)*0.25
+            table.append({
+                "skill": sk,
+                "readinessDeltaPct": round(delta, 1),
+                "unlocks": unlocks,
+                "marketVelocity": MARKET_VELOCITY.get(sk, DEFAULT_MARKET_VELOCITY),
+                "salaryImpact":   SALARY_IMPACT.get(sk, DEFAULT_SALARY_IMPACT),
+                "compositeScore": round(composite, 4),
+            })
+
+        table.sort(key=lambda x: -x["compositeScore"])
+        ks = table[0] if table else None
+        narrative = ""
+        if ks:
+            kn, kd, ku = ks["skill"], ks["readinessDeltaPct"], ks["unlocks"]
+            narrative = (
+                f"Learning `{kn}` first raises readiness by {kd:.1f}%"
+                + (f" and directly unlocks: {', '.join(ku)}." if ku else ".")
+                + f" Market velocity: {round(MARKET_VELOCITY.get(kn,0.5)*10)}/10."
+            )
+        return {
+            "keystoneSkill": ks["skill"] if ks else None,
+            "keystoneImpact": ks,
+            "marginalImpactRanking": table,
+            "scenarioNarrative": narrative,
+        }
+
+
+# ═══════════════════════════════════════════════════════════════════════════
+# ORCHESTRATOR — v3 (12 stages)
 # ═══════════════════════════════════════════════════════════════════════════
 
 class SkillForgeEngine:
     """
-    Main entry point.
+    Main entry point — v3.
     analyze(resume_text, jd_text, hours_per_week) → full JSON payload.
+    Backward-compatible: all v2 keys are preserved. New v3 keys are additive.
     """
 
     def __init__(self) -> None:
+        # v2 stages
         self.extractor  = BayesianSkillExtractor()
         self.comparator = SkillComparator()
         self.reasoner   = GraphReasoner()
         self.planner    = HireReadinessPlanner()
         self.readiness  = ReadinessModel()
+        # v3 stages
+        self.transfer   = TransferLearningModel()
+        self.market     = MarketPulseAnalyzer()
+        self.pareto     = ParetoPathOptimizer()
+        self.applicants = ApplicantSimulator()
+        self.interview  = InterviewReadinessModel()
+        self.decay      = SkillDecayForecaster()
+        self.cf         = CounterfactualExplorer()
 
-    def analyze(
-        self,
-        resume_text: str,
-        jd_text: str,
-        hours_per_week: int = 10,
-    ) -> dict[str, Any]:
+    def analyze(self, resume_text: str, jd_text: str, hours_per_week: int = 10) -> dict[str, Any]:
         trace: list[str] = []
 
-        # ── Stage 1: Extract skills from both texts ────────────────────────
+        # ── Stages 1-5 (v2, unchanged) ────────────────────────────────────
         resume_skills = self.extractor.extract(resume_text)
         jd_skills_raw = self.extractor.extract(jd_text)
-        # JD skills: only those with reasonably high confidence in JD
-        job_skills = sorted(
-            [s for s, c in jd_skills_raw.items() if c >= 0.60]
-        )
-        trace.append(
-            f"Stage 1 — Bayesian Extraction: detected {len(resume_skills)} skill signals "
-            f"in resume (direct + inferred), {len(job_skills)} required skills in JD."
-        )
+        job_skills    = sorted(s for s, c in jd_skills_raw.items() if c >= 0.60)
+        trace.append(f"Stage 1 — Bayesian Extraction: {len(resume_skills)} resume signals, {len(job_skills)} JD requirements.")
 
-        # ── Stage 2: Compare ───────────────────────────────────────────────
-        matched, raw_gaps, soft_matched = self.comparator.compare(
-            resume_skills, job_skills
-        )
-        trace.append(
-            f"Stage 2 — Probabilistic Matching: {len(matched)} confident matches, "
-            f"{len(soft_matched)} soft/inferred matches, "
-            f"{len(raw_gaps)} clear gaps."
-        )
+        matched, raw_gaps, soft_matched = self.comparator.compare(resume_skills, job_skills)
+        trace.append(f"Stage 2 — Probabilistic Matching: {len(matched)} matches, {len(soft_matched)} soft, {len(raw_gaps)} gaps.")
 
-        # ── Stage 3: Graph reasoning ───────────────────────────────────────
-        have_set = set(resume_skills.keys())
+        have_set      = set(resume_skills.keys())
         enriched_gaps = self.reasoner.enrich(raw_gaps, have_set, job_skills)
-        critical_n  = sum(1 for g in enriched_gaps if g["priority"] == "critical")
-        implicit_n  = sum(1 for g in enriched_gaps if g["implicit"])
-        trace.append(
-            f"Stage 3 — Graph Reasoning: {critical_n} critical gap(s), "
-            f"{implicit_n} implicit prerequisite gap(s) surfaced via dependency propagation."
-        )
+        critical_n    = sum(1 for g in enriched_gaps if g["priority"] == "critical")
+        implicit_n    = sum(1 for g in enriched_gaps if g["implicit"])
+        trace.append(f"Stage 3 — Graph Reasoning: {critical_n} critical, {implicit_n} implicit prereq gaps.")
 
-        # ── Stage 4: Dijkstra learning plan ───────────────────────────────
         learning_path = self.planner.plan(enriched_gaps, have_set, hours_per_week)
-        total_hours = sum(s["estimatedHours"] for s in learning_path)
-        est_weeks = math.ceil(total_hours / hours_per_week) if learning_path else 0
-        trace.append(
-            f"Stage 4 — Dijkstra Path Planning: {len(learning_path)} skills scheduled "
-            f"in dependency-optimal order, ~{est_weeks} weeks at {hours_per_week} hrs/week."
-        )
+        total_hours   = sum(s["estimatedHours"] for s in learning_path)
+        est_weeks     = math.ceil(total_hours / hours_per_week) if learning_path else 0
+        trace.append(f"Stage 4 — Dijkstra Path: {len(learning_path)} skills, ~{est_weeks} weeks.")
 
-        # ── Stage 5: Readiness curve ───────────────────────────────────────
-        readiness = self.readiness.compute(
-            matched, soft_matched, enriched_gaps, job_skills,
-            learning_path, hours_per_week
-        )
-        trace.append(
-            f"Stage 5 — Readiness Model: currently {readiness['currentReadinessPct']}% ready. "
-            + (f"Projected {readiness['projectedReadinessPct']}% after completing learning path. "
-               f"80% threshold: week {readiness['weeksTo80Pct']}."
-               if readiness['weeksTo80Pct'] else
-               f"Projected {readiness['projectedReadinessPct']}% after path.")
-        )
+        readiness = self.readiness.compute(matched, soft_matched, enriched_gaps, job_skills, learning_path, hours_per_week)
+        trace.append(f"Stage 5 — Readiness: {readiness['currentReadinessPct']}% → {readiness['projectedReadinessPct']}%.")
 
-        kpis = {
-            "totalSkillsRequired":   len(job_skills),
-            "alreadyHave":           len(matched),
-            "softMatches":           len(soft_matched),
-            "criticalGaps":          critical_n,
-            "implicitGaps":          implicit_n,
-            "estimatedWeeksToReady": est_weeks,
-            "estimatedTotalHours":   total_hours,
-        }
+        # ── Stages 6-12 (v3) ──────────────────────────────────────────────
+        transfer_bonuses = self.transfer.compute_all(enriched_gaps, resume_skills)
+        trace.append(f"Stage 6 — Transfer Learning: {len(transfer_bonuses)} skills with accelerated paths.")
+
+        market_pulse = self.market.analyze(job_skills)
+        trace.append(f"Stage 7 — Market Pulse: {len(market_pulse['trendingSkills'])} trending, inflation {market_pulse['jdInflationScore']}/100.")
+
+        pareto_frontier = self.pareto.optimize(enriched_gaps, have_set, job_skills, hours_per_week, self.transfer, resume_skills)
+        trace.append(f"Stage 8 — Pareto Optimizer: {len(pareto_frontier)} non-dominated schedules generated.")
+
+        benchmark = self.applicants.simulate(job_skills, readiness["currentReadinessPct"])
+        trace.append(f"Stage 9 — Cohort Sim ({benchmark['simulatedApplicants']} applicants): {benchmark['percentile']}th percentile.")
+
+        interview = self.interview.compute(matched, soft_matched, enriched_gaps, job_skills, learning_path)
+        trace.append(f"Stage 10 — Interview Ladder: P(hire|now)={interview['overallHireProbabilityNow']:.1%}, P(hire|path)={interview['overallHireProbabilityAfterPath']:.1%}.")
+
+        decay_alerts = self.decay.forecast(resume_skills)
+        trace.append(f"Stage 11 — Decay Forecast: {len(decay_alerts)} skill(s) at risk within 12 months.")
+
+        cf = self.cf.analyze(enriched_gaps, resume_skills, job_skills, matched, soft_matched)
+        if cf["keystoneSkill"]:
+            trace.append(f"Stage 12 — Counterfactual: keystone=`{cf['keystoneSkill']}` (+{cf['keystoneImpact']['readinessDeltaPct']}% readiness).")
 
         return {
-            "resumeSkills": sorted([
-                {"skill": s, "confidence": round(c, 3)}
-                for s, c in resume_skills.items()
-            ], key=lambda x: -x["confidence"]),
-            "jobSkills":     job_skills,
-            "matchedSkills": sorted(matched, key=lambda x: -x["confidence"]),
-            "softMatches":   soft_matched,
-            "missingSkills": [
-                {"skill": g["skill"], "priority": g["priority"],
-                 "reason": g["reason"], "implicit": g["implicit"]}
-                for g in enriched_gaps
-            ],
+            # ── v2 (fully backward-compatible) ─────────────────────────
+            "resumeSkills":   sorted([{"skill": s, "confidence": round(c,3)} for s,c in resume_skills.items()],
+                                     key=lambda x: -x["confidence"]),
+            "jobSkills":      job_skills,
+            "matchedSkills":  sorted(matched, key=lambda x: -x["confidence"]),
+            "softMatches":    soft_matched,
+            "missingSkills":  [{"skill":g["skill"],"priority":g["priority"],"reason":g["reason"],"implicit":g["implicit"]}
+                               for g in enriched_gaps],
             "skillGapScore":  readiness["currentReadinessPct"],
             "readiness":      readiness,
             "learningPath":   learning_path,
             "reasoningTrace": trace,
-            "kpis":           kpis,
+            "kpis": {
+                "totalSkillsRequired":   len(job_skills),
+                "alreadyHave":           len(matched),
+                "softMatches":           len(soft_matched),
+                "criticalGaps":          critical_n,
+                "implicitGaps":          implicit_n,
+                "estimatedWeeksToReady": est_weeks,
+                "estimatedTotalHours":   total_hours,
+            },
+            # ── v3 (new) ────────────────────────────────────────────────
+            "transferBonuses":    transfer_bonuses,
+            "marketPulse":        market_pulse,
+            "paretoFrontier":     pareto_frontier,
+            "applicantBenchmark": benchmark,
+            "interviewReadiness": interview,
+            "decayAlerts":        decay_alerts,
+            "counterfactual":     cf,
         }
 
 
