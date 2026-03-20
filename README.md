@@ -66,6 +66,7 @@ Empathetic, tone-aware mentorship.
 Watch YouSkill in action (Animated Pipeline & Analysis):
 
 ![SkillForge Live Demo](./docs/images/demo.webp)
+*[Download High-Quality MP4 Version](./docs/images/demo.mp4)*
 
 ---
 

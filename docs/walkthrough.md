@@ -27,6 +27,7 @@ The ML engine now provides a **13th stage of inference**: SHAP Explainability. I
 ## 5. Live Demo Animation
 Watch the system in action (High-Quality Animated WebP):
 ![Live Demo Recording](./docs/images/demo.webp)
+*[Download High-Quality MP4 Version](./docs/images/demo.mp4)*
 
 ---
 **Project Status**: Successfully pushed to GitHub.
