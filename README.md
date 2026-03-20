@@ -40,7 +40,7 @@ graph TD
 | **10** | **Interview Ladder** | Predicts pass probabilities for ATS, Phone Screen, Technical, and System Design. |
 | **13** | **SHAP Explainability** | Quantifies the exact contribution of each skill to your readiness score. |
 | **GenAI** | **Skill Gap Questioning** | Gemini-powered 15-question customized quiz to close your specific gaps. |
-| **GenAI** | **Career Coach Bot** | Friendly NLP bot from ByteWorks that handles roadmap prep and mental well-being. |
+| **GenAI** | **YouSkill Career Coach** | Friendly NLP bot that handles roadmap prep and mental well-being. |
 | **Match** | **JD Raw Input** | Toggle between file uploads and direct copy-pasting for job descriptions. |
 
 ---
@@ -50,17 +50,17 @@ graph TD
 ### Flexible Job Description Input
 Toggle between file uploads and raw text for rapid iteration.
 
-![JD Input - Text Mode](file:///C:/Users/sg78b/.gemini/antigravity/brain/60404314-0336-446e-b2ba-3aeca668c5fc/jd_input_toggle_text_1774028589613.png)
+![JD Input - Text Mode](/C:/Users/sg78b/.gemini/antigravity/brain/60404314-0336-446e-b2ba-3aeca668c5fc/jd_input_toggle_text_1774028589613.png)
 
-### ByteWorks Motivation Hub
+### YouSkill Motivation Hub
 A friendly entry point for career coaching and well-being.
 
-![Dashboard Motivation Card](file:///C:/Users/sg78b/.gemini/antigravity/brain/60404314-0336-446e-b2ba-3aeca668c5fc/dashboard_motivation_card_1774028642359.png)
+![Dashboard Motivation Card](/C:/Users/sg78b/.gemini/antigravity/brain/60404314-0336-446e-b2ba-3aeca668c5fc/dashboard_motivation_card_1774028642359.png)
 
-### AI Career Coach
+### YouSkill Career Coach
 Empathetic, tone-aware mentorship.
 
-![AI Career Coach UI](file:///C:/Users/sg78b/.gemini/antigravity/brain/60404314-0336-446e-b2ba-3aeca668c5fc/ai_chatbot_open_1774028661521.png)
+![YouSkill Career Coach UI](/C:/Users/sg78b/.gemini/antigravity/brain/60404314-0336-446e-b2ba-3aeca668c5fc/ai_chatbot_open_1774028661521.png)
 
 ---
 

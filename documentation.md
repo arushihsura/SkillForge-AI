@@ -55,10 +55,10 @@ Powered by **Google Gemini 1.5 Flash**, SkillForge provides two humanized AI lay
 - **Logic**: Backend passes the top 5 `missingSkills` and the `jobDescription` to Gemini.
 - **Output**: 15 high-fidelity technical and behavioral questions designed to test and teach the user's gaps.
 
-### B. ByteWorks Career Coach (AIChatbot)
-- **Persona**: Friendly, empathetic, and observant.
-- **Sentiment Awareness**: Detects tone (stress/overwhelmed) and provides motivational support.
-- **Technical Support**: Can generate code snippets, explain ML stages, and provide roadmap advice.
+### 3. Humanized YouSkill Coach
+Our Gemini-powered coach doesn't just give roadmaps—it listens. With **tone and sentiment awareness**, YouSkill detects when a user is overwhelmed and shifts to a supportive, mentoring style.
+
+![YouSkill Coach UI](//C:/Users/sg78b/.gemini/antigravity/brain/60404314-0336-446e-b2ba-3aeca668c5fc/ai_chatbot_open_1774028661521.png)
 
 ---
 

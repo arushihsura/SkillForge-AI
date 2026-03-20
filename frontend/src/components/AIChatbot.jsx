@@ -7,7 +7,7 @@ const AIChatbot = () => {
   const [messages, setMessages] = useState([
     {
       role: "assistant",
-      content: "Hi there! I'm your ByteWorks Career Coach. 🚀 I'm here to help you navigate your upskilling journey, answer questions, or just offer some motivation if things feel a bit much. How can I support you today?",
+      content: "Hi there! I'm YouSkill. 🚀 I'm here to help you navigate your upskilling journey, answer questions, or just offer some motivation if things feel a bit much. How can I support you today?",
     },
   ]);
   const [input, setInput] = useState("");
@@ -59,7 +59,7 @@ const AIChatbot = () => {
             <div className="p-4 border-b flex items-center justify-between" style={{ borderColor: "var(--border-color)", backgroundColor: "var(--bg-soft)" }}>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span className="font-space font-bold text-sm tracking-wide text-white">SkillForge Mentor</span>
+                <span className="font-space font-bold text-sm tracking-wide text-white">YouSkill AI Mentor</span>
               </div>
               <button 
                 onClick={() => setIsOpen(false)}

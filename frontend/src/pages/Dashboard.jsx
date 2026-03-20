@@ -102,7 +102,7 @@ function Dashboard() {
 
           <section className="sf-card p-6 border-accent-glow bg-accent-primary/5 flex items-center justify-between gap-4">
             <div className="flex-1">
-              <h3 className="font-space text-lg font-semibold text-white">ByteWorks Motivation 💡</h3>
+              <h3 className="font-space text-lg font-semibold text-white">YouSkill Motivation 💡</h3>
               <p className="mt-1 text-sm text-slate-300">"Upskilling is a journey of a thousand steps. Today, you take one more. You've got this!"</p>
             </div>
             <button 
