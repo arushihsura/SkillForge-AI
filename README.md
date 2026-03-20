@@ -87,38 +87,30 @@ SkillForge-AI/
 
 ---
 
-## ⚡ Setup & Installation
+## 💻 Local Working Demo (Rapid Setup)
+
+I've simplified the local setup into a single-command process.
 
 ### 1) Prerequisites
 - Node.js 18+
 - Python 3.10+
-- MongoDB (Atlas or Local)
+- MongoDB running on `localhost:27017`
 
-### 2) Installation
+### 2) Rapid Boot
 ```bash
-# Clone the repository
-git clone https://github.com/arushihsura/SkillForge-AI
+# Install everything (Root, Backend, Frontend)
+npm run install-all
 
-# Install Node dependencies
-cd SkillForge-AI/backend && npm install
-cd ../frontend && npm install
-
-# Install optional Python helpers
-pip install flask flask-cors
+# Start both Backend & Frontend concurrently
+# This uses the 'serverless' ML mode for zero-config local testing
+npm run dev
 ```
 
-### 3) Configuration (`backend/.env`)
-```env
-MONGO_URI=your_mongodb_uri
-JWT_SECRET=your_jwt_secret
-SF_MODE=tcp   # WINDOWS: tcp, LINUX/MAC: unix
-```
+The app will be live at:
+- **Frontend:** http://localhost:5173
+- **Backend:** http://localhost:5000
 
-### 4) Running the App
-For the best experience, run in separate terminals:
-- **Backend:** `cd backend && npm run dev`
-- **Frontend:** `cd frontend && npm run dev`
-- **ML Engine:** `python ml/daemon.py --tcp 8001` (Windows)
+*Ensure your `backend/.env` has the correct `MONGO_URI`. A template has been automatically generated for you.*
 
 ---
 
